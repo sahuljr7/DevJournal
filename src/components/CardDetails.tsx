@@ -24,6 +24,7 @@ import RichEditor from './RichEditor';
 import LogEntry from './LogEntry';
 import ReactMarkdown from 'react-markdown';
 import { summarizeLogs } from '../services/aiService';
+import { ZoomableImage } from './ImageOverlay';
 
 interface CardDetailsProps {
   card: JiraCard;
@@ -386,7 +387,7 @@ export default function CardDetails({
             {isReaderMode ? (
               <div className="prose prose-neutral max-w-none text-lg leading-relaxed text-[var(--ink-color)] font-serif italic opacity-80 py-4 transition-colors">
                 {newLogContent ? (
-                  <ReactMarkdown>{newLogContent}</ReactMarkdown>
+                  <ReactMarkdown components={{ img: ZoomableImage }}>{newLogContent}</ReactMarkdown>
                 ) : (
                   <p className="opacity-40">Entry is currently empty...</p>
                 )}

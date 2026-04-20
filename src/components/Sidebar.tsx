@@ -1,4 +1,4 @@
-import { Search, Plus, Download, Settings } from 'lucide-react';
+import { Search, Plus, Download, Settings, XCircle } from 'lucide-react';
 import { JiraCard } from '../types';
 import { cn, formatDate } from '../lib/utils';
 
@@ -56,27 +56,44 @@ export default function Sidebar({
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-color)] group-focus-within:text-[var(--ink-color)] transition-colors" size={14} />
             <input 
               type="text"
-              placeholder="Search cards..."
+              placeholder="Search ID, title, or #tags..."
               value={searchTerm}
               onChange={(e) => onSearchChange(e.target.value)}
               className="w-full pl-10 pr-4 py-2 bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded-sm text-xs italic outline-none focus:border-[var(--muted-color)] transition-all text-[var(--ink-color)]"
             />
           </div>
 
-          <div className="flex items-center gap-2">
-             <input 
-              type="date"
-              className="flex-1 text-[9px] bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded-sm px-2 py-1.5 outline-none font-bold uppercase tracking-tighter text-[var(--muted-color)] focus:text-[var(--ink-color)] transition-colors"
-              value={dateRange?.start || ''}
-              onChange={(e) => onDateRangeChange({ start: e.target.value, end: dateRange?.end || new Date().toISOString().split('T')[0] })}
-            />
-            <span className="text-[9px] text-[var(--border-color)]">—</span>
-            <input 
-              type="date"
-              className="flex-1 text-[9px] bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded-sm px-2 py-1.5 outline-none font-bold uppercase tracking-tighter text-[var(--muted-color)] focus:text-[var(--ink-color)] transition-colors"
-              value={dateRange?.end || ''}
-              onChange={(e) => onDateRangeChange({ start: dateRange?.start || '2000-01-01', end: e.target.value })}
-            />
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[8px] font-bold uppercase tracking-widest text-[var(--muted-color)]">Temporal Filter</span>
+              {dateRange && (dateRange.start || dateRange.end) && (
+                <button 
+                  onClick={() => onDateRangeChange(null)}
+                  className="text-[8px] font-bold uppercase tracking-widest text-red-500 hover:underline flex items-center gap-1"
+                >
+                  <XCircle size={10} /> Clear
+                </button>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <input 
+                  type="date"
+                  className="w-full text-[9px] bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded-sm px-2 py-1.5 outline-none font-bold uppercase tracking-tighter text-[var(--muted-color)] focus:text-[var(--ink-color)] transition-colors"
+                  value={dateRange?.start || ''}
+                  onChange={(e) => onDateRangeChange({ ...dateRange, start: e.target.value, end: dateRange?.end || '' } as any)}
+                />
+              </div>
+              <span className="text-[9px] text-[var(--border-color)]">—</span>
+              <div className="relative flex-1">
+                <input 
+                  type="date"
+                  className="w-full text-[9px] bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded-sm px-2 py-1.5 outline-none font-bold uppercase tracking-tighter text-[var(--muted-color)] focus:text-[var(--ink-color)] transition-colors"
+                  value={dateRange?.end || ''}
+                  onChange={(e) => onDateRangeChange({ ...dateRange, start: dateRange?.start || '', end: e.target.value } as any)}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>

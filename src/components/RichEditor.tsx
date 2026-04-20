@@ -18,6 +18,7 @@ import {
 import { cn } from '../lib/utils';
 import { Attachment } from '../types';
 import { v4 as uuidv4 } from 'uuid';
+import ImageOverlay, { ZoomableImage } from './ImageOverlay';
 
 interface RichEditorProps {
   value: string;
@@ -90,7 +91,16 @@ export default function RichEditor({
   const { getRootProps, getInputProps, isDragActive, open } = useDropzone({ 
     onDrop,
     noClick: true,
-    accept: { 'image/*': [], 'application/pdf': [], 'text/plain': [] }
+    accept: { 
+      'image/*': [], 
+      'application/pdf': [], 
+      'text/plain': [],
+      'text/markdown': [],
+      'application/json': [],
+      'application/zip': [],
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document': [],
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': []
+    }
   });
 
   const removeAttachment = (id: string) => {
@@ -173,26 +183,42 @@ export default function RichEditor({
   }, [handleFile]);
 
   return (
-    <div className="space-y-4">
+    <div 
+      {...getRootProps()} 
+      className={cn(
+        "space-y-4 relative transition-all",
+        isDragActive && "ring-2 ring-[var(--ink-color)] ring-inset"
+      )}
+    >
+      <input {...getInputProps()} />
+      
       <div 
-        {...getRootProps()} 
         onPaste={handlePaste}
         className={cn(
-          "relative rounded-sm overflow-hidden border transition-all",
-          isDragActive ? "border-[var(--ink-color)] ring-4 ring-[var(--border-color)]" : "border-[var(--border-color)]"
+          "relative rounded-sm overflow-hidden border transition-all border-[var(--border-color)]"
         )}
       >
-        <input {...getInputProps()} />
         <MdEditor
           value={value}
           style={{ height: '400px', border: 'none', backgroundColor: 'var(--bg-color)', color: 'var(--ink-color)' }}
-          renderHTML={(text) => <ReactMarkdown>{text}</ReactMarkdown>}
+          renderHTML={(text) => <ReactMarkdown components={{ img: ZoomableImage }}>{text}</ReactMarkdown>}
           onChange={handleEditorChange}
+          onImageUpload={async (file) => {
+            const at = await onFileUpload(file);
+            if (onAttachmentsChange) onAttachmentsChange(prev => [...prev, at]);
+            return at.url;
+          }}
           config={{
             view: { menu: true, md: true, html: false },
             canView: { menu: true, md: true, html: true, fullScreen: true, hideMenu: false },
           }}
         />
+        
+        <div className="absolute bottom-4 left-4 pointer-events-none opacity-40">
+           <p className="text-[7px] uppercase font-bold tracking-[0.2em] text-[var(--muted-color)]">
+             Drag & Drop or Paste to Log Sources
+           </p>
+        </div>
         
         <div className="absolute bottom-4 right-4 flex gap-2">
           <button 
@@ -204,14 +230,15 @@ export default function RichEditor({
             Attach Source
           </button>
         </div>
-
-        {isDragActive && (
-          <div className="absolute inset-0 bg-[var(--bg-color)] opacity-90 backdrop-blur-sm z-50 flex flex-col items-center justify-center border-2 border-dashed border-[var(--ink-color)]">
-            <ImageIcon size={32} className="mb-4 opacity-20" />
-            <p className="font-serif italic text-lg text-[var(--ink-color)]">Consigning files to ledger...</p>
-          </div>
-        )}
       </div>
+
+      {isDragActive && (
+        <div className="absolute inset-0 bg-[var(--bg-color)] opacity-95 backdrop-blur-md z-[100] flex flex-col items-center justify-center border-2 border-dashed border-[var(--ink-color)] animate-in fade-in zoom-in duration-200">
+          <ImageIcon size={48} className="mb-6 opacity-20 animate-bounce" />
+          <h4 className="text-2xl font-serif italic text-[var(--ink-color)] mb-2">Ingesting files to ledger...</h4>
+          <p className="text-[10px] uppercase font-bold tracking-[0.3em] text-[var(--muted-color)]">Release to consign sources</p>
+        </div>
+      )}
 
       {attachments.filter(Boolean).length > 0 && (
         <div className="p-4 border border-[var(--border-color)] bg-[var(--bg-color)] rounded-sm transition-colors">
@@ -230,7 +257,11 @@ export default function RichEditor({
                   <div className="flex gap-4">
                     <div className="shrink-0 relative h-20 w-20 border border-[var(--border-color)] bg-[var(--bg-color)] flex items-center justify-center overflow-hidden">
                       {isImage ? (
-                        <img src={norm.url} alt="prev" className="h-full w-full object-cover grayscale opacity-60 group-hover:grayscale-0 group-hover:opacity-100 transition-all" />
+                        <ZoomableImage 
+                          src={norm.url || undefined} 
+                          alt="prev" 
+                          className="h-full w-full object-cover grayscale opacity-60 group-hover:grayscale-0 group-hover:opacity-100 transition-all" 
+                        />
                       ) : isPdf ? (
                         <FileText size={24} className="text-red-500 opacity-60" />
                       ) : (
@@ -311,7 +342,11 @@ export default function RichEditor({
                       {isPdf ? (
                         <iframe src={norm.url} className="w-full h-full border-none" title={norm.name} />
                       ) : isImage ? (
-                        <img src={norm.url} alt="preview" className="max-w-full max-h-full object-contain shadow-2xl" />
+                        <ZoomableImage 
+                          src={norm.url || undefined} 
+                          alt="preview" 
+                          className="max-w-full max-h-full object-contain shadow-2xl" 
+                        />
                       ) : (
                         <div className="text-[var(--muted-color)] italic text-xs">Preview not available for this type</div>
                       )}

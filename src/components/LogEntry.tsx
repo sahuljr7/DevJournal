@@ -17,6 +17,7 @@ import { formatDate } from '../lib/utils';
 import { motion } from 'motion/react';
 import { useState } from 'react';
 import RichEditor from './RichEditor';
+import ImageOverlay, { ZoomableImage } from './ImageOverlay';
 
 interface LogEntryProps {
   log: WorkLog;
@@ -143,7 +144,7 @@ export default function LogEntry({ log, onDelete, onUpdate }: LogEntryProps) {
         </div>
       ) : (
         <div className="prose prose-neutral max-w-none text-lg leading-relaxed text-[var(--ink-color)] transition-colors">
-          <ReactMarkdown>{log.content}</ReactMarkdown>
+          <ReactMarkdown components={{ img: ZoomableImage }}>{log.content}</ReactMarkdown>
         </div>
       )}
 
@@ -160,11 +161,10 @@ export default function LogEntry({ log, onDelete, onUpdate }: LogEntryProps) {
                 <div className="flex gap-4">
                   <div className="shrink-0 relative h-20 w-20 border border-[var(--border-color)] bg-[var(--secondary-bg)] flex items-center justify-center overflow-hidden">
                     {isImage ? (
-                      <img 
+                      <ZoomableImage 
                         src={norm.url || undefined} 
                         alt={norm.name} 
                         className="h-full w-full object-cover grayscale opacity-80 group-hover/at:grayscale-0 group-hover/at:opacity-100 transition-all" 
-                        referrerPolicy="no-referrer"
                       />
                     ) : isPdf ? (
                       <div className="flex flex-col items-center gap-1">
@@ -239,7 +239,11 @@ export default function LogEntry({ log, onDelete, onUpdate }: LogEntryProps) {
                     {isPdf ? (
                       <iframe src={norm.url} className="w-full h-full border-none" title={norm.name} />
                     ) : isImage ? (
-                      <img src={norm.url} alt="preview" className="max-w-full max-h-full object-contain shadow-2xl transition-transform hover:scale-110 cursor-zoom-in" />
+                      <ZoomableImage 
+                        src={norm.url || undefined} 
+                        alt="preview" 
+                        className="max-w-full max-h-full object-contain shadow-2xl transition-transform hover:scale-110" 
+                      />
                     ) : (
                       <div className="text-[var(--muted-color)] italic text-xs">Preview not available for this type</div>
                     )}

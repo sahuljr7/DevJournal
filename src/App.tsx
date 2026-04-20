@@ -28,15 +28,26 @@ export default function App() {
   [state.cards, selectedCardId]);
 
   const filteredCards = useMemo(() => {
-    const term = searchTerm.toLowerCase();
+    const term = searchTerm.toLowerCase().trim();
+    const isTagSearch = term.startsWith('#');
+    const tagTerm = isTagSearch ? term.slice(1) : term;
+
     return state.cards.filter(c => {
-      const matchesSearch = c.jiraId.toLowerCase().includes(term) ||
-        c.title.toLowerCase().includes(term) ||
-        c.tags.some(t => t.toLowerCase().includes(term));
+      // Search matching logic
+      const matchesSearch = !term || (
+        isTagSearch 
+          ? c.tags.some(t => t.toLowerCase().includes(tagTerm))
+          : (
+              c.jiraId.toLowerCase().includes(term) ||
+              c.title.toLowerCase().includes(term) ||
+              c.tags.some(t => t.toLowerCase().includes(term))
+            )
+      );
       
-      const matchesDate = !dateRange || (
-        new Date(c.createdAt) >= new Date(dateRange.start) &&
-        new Date(c.createdAt) <= new Date(dateRange.end)
+      const hasValidDateRange = dateRange && dateRange.start && dateRange.end;
+      const matchesDate = !hasValidDateRange || (
+        new Date(c.createdAt) >= new Date(`${dateRange.start}T00:00:00`) &&
+        new Date(c.createdAt) <= new Date(`${dateRange.end}T23:59:59`)
       );
 
       return matchesSearch && matchesDate;
