@@ -18,7 +18,13 @@ export interface WorkLog {
   attachments: string[]; // Base64 or URLs
 }
 
+export interface AppPreferences {
+  theme: 'editorial' | 'dark' | 'high-contrast';
+  fontFamily: 'serif' | 'sans' | 'mono';
+}
+
 export interface AppState {
   cards: JiraCard[];
   logs: WorkLog[];
+  preferences?: AppPreferences;
 }

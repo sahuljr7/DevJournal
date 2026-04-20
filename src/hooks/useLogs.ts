@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { JiraCard, WorkLog, AppState } from '../types';
+import { JiraCard, WorkLog, AppState, AppPreferences } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
 const STORAGE_KEY = 'devjournal_state';
@@ -9,17 +9,32 @@ export function useLogs() {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (!parsed.preferences) {
+          parsed.preferences = { theme: 'editorial', fontFamily: 'serif' };
+        }
+        return parsed;
       } catch (e) {
         console.error('Failed to parse storage:', e);
       }
     }
-    return { cards: [], logs: [] };
+    return { 
+      cards: [], 
+      logs: [], 
+      preferences: { theme: 'editorial', fontFamily: 'serif' } 
+    };
   });
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   }, [state]);
+
+  const updatePreferences = (updates: Partial<AppPreferences>) => {
+    setState((prev) => ({
+      ...prev,
+      preferences: { ...prev.preferences!, ...updates }
+    }));
+  };
 
   const addCard = (jiraId: string, title: string, tags: string[]) => {
     const newCard: JiraCard = {
@@ -74,6 +89,8 @@ export function useLogs() {
 
   return {
     state,
+    preferences: state.preferences!,
+    updatePreferences,
     addCard,
     updateCard,
     deleteCard,

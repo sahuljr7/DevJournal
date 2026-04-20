@@ -5,13 +5,38 @@
   --font-sans: "Helvetica Neue", "Arial", sans-serif;
   --font-serif: "Playfair Display", serif;
   --font-mono: "JetBrains Mono", monospace;
-  --color-editorial-bg: #FDFCFB;
-  --color-editorial-ink: #1A1A1A;
 }
 
 @layer base {
+  :root {
+    --bg-color: #FDFCFB;
+    --ink-color: #1A1A1A;
+    --border-color: rgba(0, 0, 0, 0.1);
+    --muted-color: rgba(0, 0, 0, 0.4);
+    --secondary-bg: rgba(0, 0, 0, 0.05);
+  }
+
+  .theme-dark {
+    --bg-color: #121212;
+    --ink-color: #E0E0E0;
+    --border-color: rgba(255, 255, 255, 0.1);
+    --muted-color: rgba(255, 255, 255, 0.4);
+    --secondary-bg: rgba(255, 255, 255, 0.05);
+  }
+
+  .theme-high-contrast {
+    --bg-color: #000000;
+    --ink-color: #FFFFFF;
+    --border-color: #FFFFFF;
+    --muted-color: #CCCCCC;
+    --secondary-bg: #222222;
+  }
+
   body {
-    @apply antialiased text-editorial-ink bg-editorial-bg;
+    @apply antialiased;
+    background-color: var(--bg-color);
+    color: var(--ink-color);
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   /* Custom Scrollbar */
@@ -22,9 +47,18 @@
     background: transparent;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    @apply bg-black/10 rounded-full hover:bg-black/20 transition-colors;
+    background-color: var(--border-color);
+    border-radius: 9999px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background-color: var(--muted-color);
   }
 }
+
+/* Notebook Font Styles */
+.font-style-serif { font-family: var(--font-serif) !important; }
+.font-style-sans { font-family: var(--font-sans) !important; }
+.font-style-mono { font-family: var(--font-mono) !important; }
 
 /* Markdown Editor Customization */
 .rc-md-editor {

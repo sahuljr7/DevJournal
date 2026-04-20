@@ -17,40 +17,40 @@ export default function LogEntry({ log, onDelete }: LogEntryProps) {
       className="group relative"
     >
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.2em] text-black/40">
+        <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.2em] text-[var(--muted-color)] transition-colors">
           <Clock size={10} strokeWidth={3} />
           {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} &bull; {formatDate(log.timestamp)}
         </div>
         <button 
           onClick={onDelete}
-          className="p-1 opacity-0 group-hover:opacity-100 text-black/10 hover:text-red-500 transition-all"
+          className="p-1 opacity-0 group-hover:opacity-100 text-[var(--muted-color)] hover:text-red-500 transition-all"
         >
           <Trash2 size={12} />
         </button>
       </div>
 
-      <div className="prose prose-neutral max-w-none font-serif text-lg leading-relaxed text-black/80">
+      <div className="prose prose-neutral max-w-none text-lg leading-relaxed text-[var(--ink-color)] transition-colors">
         <ReactMarkdown>{log.content}</ReactMarkdown>
       </div>
 
       {log.attachments.length > 0 && (
-        <div className="mt-8 flex flex-wrap gap-4 pt-6 border-t border-black/5">
+        <div className="mt-8 flex flex-wrap gap-4 pt-6 border-t border-[var(--border-color)] transition-colors">
           {log.attachments.map((at, i) => (
-            <div key={i} className="group/at relative border border-black/10 p-2 bg-white shadow-sm transition-transform hover:scale-105">
+            <div key={i} className="group/at relative border border-[var(--border-color)] p-2 bg-[var(--bg-color)] shadow-sm transition-transform hover:scale-105">
               <img 
                 src={at} 
                 alt="attachment" 
-                className="h-32 w-auto object-cover grayscale hover:grayscale-0 transition-all" 
+                className="h-32 w-auto object-cover grayscale hover:grayscale-0 transition-all opacity-80 hover:opacity-100" 
                 referrerPolicy="no-referrer"
               />
-              <p className="mt-2 text-[8px] uppercase font-bold text-black/20 tracking-tighter">screenshot_{i+1}.png</p>
+              <p className="mt-2 text-[8px] uppercase font-bold text-[var(--muted-color)] tracking-tighter">screenshot_{i+1}.png</p>
             </div>
           ))}
         </div>
       )}
       
       {/* Editorial divider */}
-      <div className="mt-12 h-[1px] w-12 bg-black/10" />
+      <div className="mt-12 h-[1px] w-12 bg-[var(--border-color)] transition-colors" />
     </motion.div>
   );
 }

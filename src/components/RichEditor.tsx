@@ -60,12 +60,12 @@ export default function RichEditor({ value, onChange }: RichEditorProps) {
     <div 
       {...getRootProps()} 
       onPaste={handlePaste}
-      className={`relative rounded-sm overflow-hidden border ${isDragActive ? 'border-black ring-4 ring-black/5' : 'border-black/10'} transition-all`}
+      className={`relative rounded-sm overflow-hidden border ${isDragActive ? 'border-[var(--ink-color)] ring-4 ring-[var(--border-color)]' : 'border-[var(--border-color)]'} transition-all`}
     >
       <input {...getInputProps()} />
       <MdEditor
         value={value}
-        style={{ height: '400px', border: 'none' }}
+        style={{ height: '400px', border: 'none', backgroundColor: 'var(--bg-color)', color: 'var(--ink-color)' }}
         renderHTML={(text) => <ReactMarkdown>{text}</ReactMarkdown>}
         onChange={handleEditorChange}
         config={{
@@ -74,15 +74,15 @@ export default function RichEditor({ value, onChange }: RichEditorProps) {
         }}
       />
       <div className="absolute bottom-4 right-4 flex gap-2 pointer-events-none opacity-20 group-hover:opacity-100 transition-opacity">
-        <div className="flex items-center gap-1.5 px-3 py-1 bg-black text-white rounded-none text-[8px] font-bold uppercase tracking-widest">
+        <div className="flex items-center gap-1.5 px-3 py-1 bg-[var(--ink-color)] text-[var(--bg-color)] rounded-none text-[8px] font-bold uppercase tracking-widest">
           <ImageIcon size={10} />
           Drop Capture
         </div>
       </div>
       {isDragActive && (
-        <div className="absolute inset-0 bg-white/90 backdrop-blur-sm z-50 flex flex-col items-center justify-center border-2 border-dashed border-black">
+        <div className="absolute inset-0 bg-[var(--bg-color)] opacity-90 backdrop-blur-sm z-50 flex flex-col items-center justify-center border-2 border-dashed border-[var(--ink-color)]">
           <ImageIcon size={32} className="mb-4 opacity-20" />
-          <p className="font-serif italic text-lg">Drop images to ledger</p>
+          <p className="font-serif italic text-lg text-[var(--ink-color)]">Drop images to ledger</p>
         </div>
       )}
     </div>
