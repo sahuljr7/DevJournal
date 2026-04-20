@@ -9,20 +9,22 @@ import RichEditor from './RichEditor';
 interface LogEntryProps {
   log: WorkLog;
   onDelete: () => void;
-  onUpdate: (content: string) => void;
+  onUpdate: (content: string, attachments: string[]) => void;
 }
 
 export default function LogEntry({ log, onDelete, onUpdate }: LogEntryProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(log.content);
+  const [editAttachments, setEditAttachments] = useState<string[]>(log.attachments);
 
   const handleSave = () => {
-    onUpdate(editContent);
+    onUpdate(editContent, editAttachments);
     setIsEditing(false);
   };
 
   const handleCancel = () => {
     setEditContent(log.content);
+    setEditAttachments(log.attachments);
     setIsEditing(false);
   };
 
@@ -84,6 +86,8 @@ export default function LogEntry({ log, onDelete, onUpdate }: LogEntryProps) {
           <RichEditor 
             value={editContent}
             onChange={setEditContent}
+            attachments={editAttachments}
+            onAttachmentsChange={setEditAttachments}
           />
         </div>
       ) : (

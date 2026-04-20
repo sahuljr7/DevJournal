@@ -27,7 +27,7 @@ interface CardDetailsProps {
   onDeleteCard: (id: string) => void;
   onAddLog: (cardId: string, content: string, attachments: string[]) => void;
   onDeleteLog: (id: string) => void;
-  onUpdateLog: (id: string, content: string) => void;
+  onUpdateLog: (id: string, content: string, attachments: string[]) => void;
 }
 
 export default function CardDetails({
@@ -43,6 +43,7 @@ export default function CardDetails({
   const [newLogContent, setNewLogContent] = useState('');
   const [isAddingLog, setIsAddingLog] = useState(false);
   const [isReaderMode, setIsReaderMode] = useState(false);
+  const [attachments, setAttachments] = useState<string[]>([]);
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
   const [summaryError, setSummaryError] = useState<string | null>(null);
@@ -53,9 +54,10 @@ export default function CardDetails({
   };
 
   const handleAddLog = () => {
-    if (!newLogContent.trim()) return;
-    onAddLog(card.id, newLogContent, []);
+    if (!newLogContent.trim() && attachments.length === 0) return;
+    onAddLog(card.id, newLogContent, attachments);
     setNewLogContent('');
+    setAttachments([]);
     setIsAddingLog(false);
   };
 
@@ -238,6 +240,8 @@ export default function CardDetails({
               <RichEditor 
                 value={newLogContent}
                 onChange={setNewLogContent}
+                attachments={attachments}
+                onAttachmentsChange={setAttachments}
               />
             )}
             
@@ -300,7 +304,7 @@ export default function CardDetails({
                 key={log.id} 
                 log={log} 
                 onDelete={() => onDeleteLog(log.id)}
-                onUpdate={(content) => onUpdateLog(log.id, content)}
+                onUpdate={(content, at) => onUpdateLog(log.id, content, at)}
               />
             ))
           ) : (

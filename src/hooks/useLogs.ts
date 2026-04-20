@@ -87,11 +87,11 @@ export function useLogs() {
     }));
   };
 
-  const updateLog = (id: string, content: string) => {
+  const updateLog = (id: string, content: string, attachments: string[]) => {
     setState((prev) => ({
       ...prev,
       logs: prev.logs.map((l) =>
-        l.id === id ? { ...l, content } : l
+        l.id === id ? { ...l, content, attachments } : l
       ),
     }));
   };
