@@ -87,6 +87,15 @@ export function useLogs() {
     }));
   };
 
+  const updateLog = (id: string, content: string) => {
+    setState((prev) => ({
+      ...prev,
+      logs: prev.logs.map((l) =>
+        l.id === id ? { ...l, content } : l
+      ),
+    }));
+  };
+
   return {
     state,
     preferences: state.preferences!,
@@ -96,5 +105,6 @@ export function useLogs() {
     deleteCard,
     addLog,
     deleteLog,
+    updateLog,
   };
 }

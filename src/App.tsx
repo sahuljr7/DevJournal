@@ -15,7 +15,7 @@ import ExportPanel from './components/ExportPanel';
 import SettingsPanel from './components/SettingsPanel';
 
 export default function App() {
-  const { state, preferences, updatePreferences, addCard, updateCard, deleteCard, addLog, deleteLog } = useLogs();
+  const { state, preferences, updatePreferences, addCard, updateCard, deleteCard, addLog, deleteLog, updateLog } = useLogs();
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -120,6 +120,7 @@ export default function App() {
                   }}
                   onAddLog={addLog}
                   onDeleteLog={deleteLog}
+                  onUpdateLog={updateLog}
                 />
               </motion.div>
             ) : (

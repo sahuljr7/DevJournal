@@ -27,6 +27,7 @@ interface CardDetailsProps {
   onDeleteCard: (id: string) => void;
   onAddLog: (cardId: string, content: string, attachments: string[]) => void;
   onDeleteLog: (id: string) => void;
+  onUpdateLog: (id: string, content: string) => void;
 }
 
 export default function CardDetails({
@@ -36,6 +37,7 @@ export default function CardDetails({
   onDeleteCard,
   onAddLog,
   onDeleteLog,
+  onUpdateLog,
 }: CardDetailsProps) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [newLogContent, setNewLogContent] = useState('');
@@ -298,6 +300,7 @@ export default function CardDetails({
                 key={log.id} 
                 log={log} 
                 onDelete={() => onDeleteLog(log.id)}
+                onUpdate={(content) => onUpdateLog(log.id, content)}
               />
             ))
           ) : (
