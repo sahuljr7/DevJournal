@@ -15,9 +15,15 @@ import {
   Loader2,
   X,
   ListTodo,
-  CheckSquare
+  CheckSquare,
+  FileDown,
+  FileArchive,
+  Download
 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { jsPDF } from 'jspdf';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 import { JiraCard, WorkLog, Attachment } from '../types';
 import { cn, formatDate } from '../lib/utils';
 import RichEditor from './RichEditor';
@@ -135,6 +141,118 @@ export default function CardDetails({
     }
   };
 
+  const downloadFullTaskPDF = () => {
+    const doc = new jsPDF();
+    let yPos = 20;
+
+    // Header
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`${card.jiraId}: ${card.title}`, 20, yPos);
+    yPos += 10;
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Status: ${card.status.toUpperCase()}`, 20, yPos);
+    yPos += 15;
+
+    // Splitter
+    doc.setDrawColor(200, 200, 200);
+    doc.line(20, yPos - 5, 190, yPos - 5);
+
+    // Description
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Description:', 20, yPos);
+    yPos += 7;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    const splitDesc = doc.splitTextToSize(card.description || 'No description provided.', 170);
+    doc.text(splitDesc, 20, yPos);
+    yPos += (splitDesc.length * 5) + 12;
+
+    // Tasks
+    if (card.tasks && card.tasks.length > 0) {
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Action Items:', 20, yPos);
+      yPos += 7;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      card.tasks.forEach(t => {
+        if (yPos > 280) { doc.addPage(); yPos = 20; }
+        const symbol = t.completed ? '[x]' : '[ ]';
+        doc.text(`${symbol} ${t.text}`, 25, yPos);
+        yPos += 6;
+      });
+      yPos += 12;
+    }
+
+    // Logs Section
+    doc.addPage();
+    yPos = 20;
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Work Ledger (Log Entries)', 20, yPos);
+    yPos += 10;
+    doc.line(20, yPos - 5, 190, yPos - 5);
+
+    logs.forEach((log, index) => {
+      if (yPos > 240) { doc.addPage(); yPos = 20; }
+      
+      const logNum = logs.length - index;
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(100, 100, 100);
+      doc.text(`ENTRY #${logNum} // ${formatDate(log.timestamp)}`, 20, yPos);
+      yPos += 8;
+      
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      const splitLog = doc.splitTextToSize(log.content, 170);
+      doc.text(splitLog, 20, yPos);
+      yPos += (splitLog.length * 5) + 10;
+
+      if (log.attachments && log.attachments.length > 0) {
+         doc.setFontSize(8);
+         doc.setFont('helvetica', 'italic');
+         doc.text(`Note: ${log.attachments.length} source file(s) consigned to this entry.`, 25, yPos);
+         yPos += 8;
+      }
+      
+      yPos += 5; // Spacing between entries
+    });
+
+    // Footer info on all pages
+    const pageCount = (doc as any).internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(150, 150, 150);
+      doc.text(`DevJournal Export // ${card.jiraId} // Page ${i} of ${pageCount}`, 20, 285);
+    }
+
+    doc.save(`TaskReport-${card.jiraId}.pdf`);
+  };
+
+  const downloadAllTextLogs = async () => {
+    if (logs.length === 0) return;
+    const zip = new JSZip();
+    
+    logs.forEach((log, index) => {
+      const dateStr = new Date(log.timestamp).toISOString().split('T')[0];
+      const itemsCount = logs.length - index;
+      const filename = `entry-${itemsCount}-${dateStr}.md`;
+      
+      const content = `# Log Entry #${itemsCount}\nDate: ${formatDate(log.timestamp)}\nStatus: ${log.linkedStatus || 'None'}\n\n${log.content}\n\n---\nExported from DevJournal`;
+      zip.file(filename, content);
+    });
+
+    const content = await zip.generateAsync({ type: "blob" });
+    saveAs(content, `all-logs-text-${card.jiraId}.zip`);
+  };
+
   const statusIcons = {
     'todo': <Circle size={18} className="text-neutral-400" />,
     'in-progress': <Clock size={18} className="text-amber-500" />,
@@ -167,6 +285,15 @@ export default function CardDetails({
           </div>
           
           <div className="flex items-center gap-2">
+            <button 
+              onClick={downloadFullTaskPDF}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-[var(--border-color)] text-[var(--muted-color)] text-[9px] font-bold uppercase tracking-widest hover:text-[var(--ink-color)] hover:border-[var(--ink-color)] transition-all rounded-sm"
+              title="Download Full Task Report (PDF)"
+            >
+              <FileDown size={14} />
+              Export PDF
+            </button>
+            <div className="w-[1px] h-4 bg-[var(--border-color)] mx-1" />
             <button 
               onClick={() => onDeleteCard(card.id)}
               className="p-2 text-[var(--border-color)] hover:text-red-500 hover:bg-red-500/10 transition-all rounded-sm"
@@ -362,15 +489,27 @@ export default function CardDetails({
             </button>
 
             {!isAddingLog && !isReaderMode && (
-              <>
-                <div className="w-[1px] h-3 bg-[var(--border-color)] mx-1" />
+              <div className="flex items-center">
+                {logs.length > 0 && (
+                  <>
+                    <button 
+                      onClick={downloadAllTextLogs}
+                      className="px-3 py-1.5 border border-[var(--border-color)] text-[var(--muted-color)] text-[8px] font-bold uppercase tracking-widest hover:text-[var(--ink-color)] transition-all flex items-center gap-1.5"
+                      title="Archive All Text Entries (.zip)"
+                    >
+                      <FileArchive size={10} />
+                      Log Archive
+                    </button>
+                    <div className="w-[1px] h-3 bg-[var(--border-color)] mx-2" />
+                  </>
+                )}
                 <button 
                   onClick={() => setIsAddingLog(true)}
                   className="px-4 py-2 border border-[var(--border-color)] text-[var(--ink-color)] text-[9px] font-bold uppercase tracking-widest hover:bg-[var(--secondary-bg)] transition-colors"
                 >
                   + New Entry
                 </button>
-              </>
+              </div>
             )}
           </div>
         </div>

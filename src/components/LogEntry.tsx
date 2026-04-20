@@ -304,6 +304,15 @@ export default function LogEntry({ log, onDelete, onUpdate }: LogEntryProps) {
                           {isPreviewing ? 'Hide' : 'PDF Preview'}
                         </button>
                       )}
+                      <a 
+                        href={norm.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="shrink-0 flex items-center gap-1 text-[7px] uppercase font-bold tracking-widest px-1.5 py-0.5 border border-[var(--border-color)] text-[var(--muted-color)] hover:border-[var(--ink-color)] hover:text-[var(--ink-color)] transition-all"
+                      >
+                        <ExternalLink size={8} />
+                        View Source
+                      </a>
                     </div>
                     <p className="text-[8px] uppercase tracking-widest text-[var(--muted-color)] font-mono mb-1">
                        {norm.type.split('/')[1] || 'binary'} // {Math.round(norm.url.length / 1024)}KB
