@@ -43,6 +43,12 @@ export default function App() {
     });
   }, [state.cards, searchTerm, dateRange]);
 
+  const allTags = useMemo(() => {
+    const tags = new Set<string>();
+    state.cards.forEach(c => c.tags.forEach(t => tags.add(t)));
+    return Array.from(tags).sort();
+  }, [state.cards]);
+
   const handleCreateCard = () => {
     const newCard = addCard('NEW-1', 'New Jira Card', ['task']);
     setSelectedCardId(newCard.id);
@@ -113,6 +119,7 @@ export default function App() {
                 <CardDetails 
                   card={selectedCard}
                   logs={state.logs.filter(l => l.cardId === selectedCard.id)}
+                  allTags={allTags}
                   onUpdateCard={updateCard}
                   onDeleteCard={(id) => {
                     deleteCard(id);

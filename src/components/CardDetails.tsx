@@ -11,7 +11,8 @@ import {
   Eye,
   EyeOff,
   Sparkles,
-  Loader2
+  Loader2,
+  X
 } from 'lucide-react';
 import { JiraCard, WorkLog } from '../types';
 import { cn, formatDate } from '../lib/utils';
@@ -23,6 +24,7 @@ import { summarizeLogs } from '../services/aiService';
 interface CardDetailsProps {
   card: JiraCard;
   logs: WorkLog[];
+  allTags: string[];
   onUpdateCard: (id: string, updates: Partial<JiraCard>) => void;
   onDeleteCard: (id: string) => void;
   onAddLog: (cardId: string, content: string, attachments: string[]) => void;
@@ -33,6 +35,7 @@ interface CardDetailsProps {
 export default function CardDetails({
   card,
   logs,
+  allTags,
   onUpdateCard,
   onDeleteCard,
   onAddLog,
@@ -41,6 +44,8 @@ export default function CardDetails({
 }: CardDetailsProps) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [newLogContent, setNewLogContent] = useState('');
+  const [tagInput, setTagInput] = useState('');
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [isAddingLog, setIsAddingLog] = useState(false);
   const [isReaderMode, setIsReaderMode] = useState(false);
   const [attachments, setAttachments] = useState<string[]>([]);
@@ -49,8 +54,26 @@ export default function CardDetails({
   const [summaryError, setSummaryError] = useState<string | null>(null);
 
   const handleUpdateTags = (tagsStr: string) => {
-    const tags = tagsStr.split(',').map(t => t.trim()).filter(Boolean);
+    const tags = Array.from(new Set(tagsStr.split(',').map(t => t.trim().toLowerCase()).filter(Boolean)));
     onUpdateCard(card.id, { tags });
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    const newTags = card.tags.filter(t => t !== tagToRemove);
+    onUpdateCard(card.id, { tags: newTags });
+  };
+
+  const filteredSuggestions = allTags.filter(t => 
+    t.toLowerCase().includes(tagInput.toLowerCase()) && 
+    !card.tags.includes(t)
+  ).slice(0, 5);
+
+  const handleAddTag = (tag: string) => {
+    if (!tag) return;
+    const newTags = Array.from(new Set([...card.tags, tag.toLowerCase().trim()]));
+    onUpdateCard(card.id, { tags: newTags });
+    setTagInput('');
+    setShowSuggestions(false);
   };
 
   const handleAddLog = () => {
@@ -142,20 +165,49 @@ export default function CardDetails({
         <div className="flex flex-wrap items-center gap-2 mt-8">
           <Tag size={12} className="text-[var(--muted-color)]" />
           {card.tags.map((tag, i) => (
-            <span key={i} className="px-2 py-0.5 border border-[var(--border-color)] text-[var(--muted-color)] text-[9px] uppercase font-bold tracking-widest italic transition-colors">
+            <span key={i} className="flex items-center gap-1 px-2 py-0.5 border border-[var(--border-color)] text-[var(--muted-color)] text-[9px] uppercase font-bold tracking-widest italic transition-colors group/tag">
               {tag}
+              <button 
+                onClick={() => removeTag(tag)}
+                className="opacity-0 group-hover/tag:opacity-100 hover:text-red-500 transition-all p-0.5"
+              >
+                <X size={8} />
+              </button>
             </span>
           ))}
-          <input 
-            placeholder="add tags..."
-            className="text-[9px] bg-transparent border-none outline-none focus:ring-0 text-[var(--muted-color)] w-32 lowercase font-bold tracking-tighter"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                handleUpdateTags((e.target as HTMLInputElement).value + ',' + card.tags.join(','));
-                (e.target as HTMLInputElement).value = '';
-              }
-            }}
-          />
+          <div className="relative">
+            <input 
+              placeholder="add tags..."
+              className="text-[9px] bg-transparent border-none outline-none focus:ring-0 text-[var(--muted-color)] w-32 lowercase font-bold tracking-tighter"
+              value={tagInput}
+              onChange={(e) => {
+                setTagInput(e.target.value);
+                setShowSuggestions(true);
+              }}
+              onFocus={() => setShowSuggestions(true)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleAddTag(tagInput);
+                }
+                if (e.key === 'Escape') {
+                  setShowSuggestions(false);
+                }
+              }}
+            />
+            {showSuggestions && tagInput && filteredSuggestions.length > 0 && (
+              <div className="absolute left-0 bottom-full mb-1 w-40 bg-[var(--bg-color)] border border-[var(--border-color)] shadow-xl z-50 animate-in fade-in slide-in-from-bottom-1 duration-200">
+                {filteredSuggestions.map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    className="w-full text-left px-3 py-2 text-[8px] uppercase font-bold tracking-widest text-[var(--muted-color)] hover:bg-[var(--secondary-bg)] hover:text-[var(--ink-color)] border-b last:border-0 border-[var(--border-color)] transition-colors"
+                    onClick={() => handleAddTag(suggestion)}
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </header>
 

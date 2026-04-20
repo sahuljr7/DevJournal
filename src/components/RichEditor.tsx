@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import React, { useCallback } from 'react';
 import MdEditor from 'react-markdown-editor-lite';
 import ReactMarkdown from 'react-markdown';
 import 'react-markdown-editor-lite/lib/index.css';
@@ -10,7 +10,7 @@ interface RichEditorProps {
   value: string;
   onChange: (val: string) => void;
   attachments?: string[];
-  onAttachmentsChange?: (attachments: string[]) => void;
+  onAttachmentsChange?: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
 export default function RichEditor({ 
@@ -38,7 +38,7 @@ export default function RichEditor({
     
     // Add to attachments if callback provided
     if (onAttachmentsChange) {
-      onAttachmentsChange([...attachments, url]);
+      onAttachmentsChange(prev => [...prev, url]);
     }
 
     // Also insert into markdown if it's an image
@@ -46,7 +46,7 @@ export default function RichEditor({
       const imageMarkdown = `\n![${file.name}](${url})\n`;
       onChange(value + imageMarkdown);
     }
-  }, [value, onChange, onImageUpload, attachments, onAttachmentsChange]);
+  }, [value, onChange, onImageUpload, onAttachmentsChange]);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     for (const file of acceptedFiles) {
@@ -62,9 +62,11 @@ export default function RichEditor({
 
   const removeAttachment = (index: number) => {
     if (onAttachmentsChange) {
-      const newAttachments = [...attachments];
-      newAttachments.splice(index, 1);
-      onAttachmentsChange(newAttachments);
+      onAttachmentsChange(prev => {
+        const newAttachments = [...prev];
+        newAttachments.splice(index, 1);
+        return newAttachments;
+      });
     }
   };
 
@@ -124,7 +126,9 @@ export default function RichEditor({
 
       {attachments.length > 0 && (
         <div className="p-4 border border-[var(--border-color)] bg-[var(--bg-color)] rounded-sm transition-colors">
-          <h5 className="text-[9px] uppercase font-bold tracking-[0.2em] text-[var(--muted-color)] mb-4 italic">Pending Attachments // {attachments.length}</h5>
+          <h5 className="text-[9px] uppercase font-bold tracking-[0.2em] text-[var(--muted-color)] mb-4 italic">
+            Consigned Sources // {attachments.length}
+          </h5>
           <div className="flex flex-wrap gap-4">
             {attachments.map((at, i) => (
               <div key={i} className="group relative border border-[var(--border-color)] p-1 bg-[var(--secondary-bg)] shadow-sm">
