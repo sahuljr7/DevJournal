@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { Toaster } from 'sonner';
 import { 
   Plus, 
   ChevronLeft,
@@ -178,6 +179,7 @@ export default function App() {
           />
         )}
       </AnimatePresence>
+      <Toaster position="bottom-right" expand={false} richColors theme={preferences.theme === 'dark' ? 'dark' : 'light'} />
     </div>
   );
 }

@@ -25,6 +25,7 @@ import { WorkLog, Attachment, AttachmentVersion } from '../types';
 import { cn, formatDate } from '../lib/utils';
 import { motion } from 'motion/react';
 import { useState } from 'react';
+import { toast } from 'sonner';
 import RichEditor from './RichEditor';
 import ImageOverlay, { ZoomableImage } from './ImageOverlay';
 
@@ -82,6 +83,11 @@ export default function LogEntry({ log, onDelete, onUpdate }: LogEntryProps) {
     const newAttachments = [...log.attachments];
     newAttachments[atIndex] = updatedAt;
     onUpdate(log.content, newAttachments);
+    
+    toast.success('Source data restored', {
+      description: `Version from ${new Date(version.timestamp).toLocaleString()} is now active.`,
+      icon: <HistoryIcon size={16} className="text-emerald-500" />
+    });
   };
 
   const handleSave = () => {
