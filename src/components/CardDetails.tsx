@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { v4 as uuidv4 } from 'uuid';
 import { 
   Trash2, 
   ExternalLink, 
@@ -12,9 +13,12 @@ import {
   EyeOff,
   Sparkles,
   Loader2,
-  X
+  X,
+  ListTodo,
+  CheckSquare
 } from 'lucide-react';
-import { JiraCard, WorkLog } from '../types';
+import { motion } from 'motion/react';
+import { JiraCard, WorkLog, Attachment } from '../types';
 import { cn, formatDate } from '../lib/utils';
 import RichEditor from './RichEditor';
 import LogEntry from './LogEntry';
@@ -27,9 +31,9 @@ interface CardDetailsProps {
   allTags: string[];
   onUpdateCard: (id: string, updates: Partial<JiraCard>) => void;
   onDeleteCard: (id: string) => void;
-  onAddLog: (cardId: string, content: string, attachments: string[]) => void;
+  onAddLog: (cardId: string, content: string, attachments: (string | Attachment)[]) => void;
   onDeleteLog: (id: string) => void;
-  onUpdateLog: (id: string, content: string, attachments: string[]) => void;
+  onUpdateLog: (id: string, content: string, attachments: (string | Attachment)[]) => void;
 }
 
 export default function CardDetails({
@@ -45,6 +49,7 @@ export default function CardDetails({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [newLogContent, setNewLogContent] = useState('');
   const [tagInput, setTagInput] = useState('');
+  const [taskInput, setTaskInput] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isAddingLog, setIsAddingLog] = useState(false);
   const [isReaderMode, setIsReaderMode] = useState(false);
@@ -75,6 +80,33 @@ export default function CardDetails({
     setTagInput('');
     setShowSuggestions(false);
   };
+
+  const addTask = () => {
+    if (!taskInput.trim()) return;
+    const newTask = {
+      id: uuidv4(),
+      text: taskInput.trim(),
+      completed: false
+    };
+    onUpdateCard(card.id, { tasks: [...(card.tasks || []), newTask] });
+    setTaskInput('');
+  };
+
+  const toggleTask = (taskId: string) => {
+    const newTasks = (card.tasks || []).map(t => 
+      t.id === taskId ? { ...t, completed: !t.completed } : t
+    );
+    onUpdateCard(card.id, { tasks: newTasks });
+  };
+
+  const removeTask = (taskId: string) => {
+    const newTasks = (card.tasks || []).filter(t => t.id !== taskId);
+    onUpdateCard(card.id, { tasks: newTasks });
+  };
+
+  const completedCount = (card.tasks || []).filter(t => t.completed).length;
+  const totalCount = (card.tasks || []).length;
+  const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
   const handleAddLog = () => {
     if (!newLogContent.trim() && attachments.length === 0) return;
@@ -207,6 +239,77 @@ export default function CardDetails({
                 ))}
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Sub-tasks Section */}
+        <div className="mt-12 space-y-6">
+          <div className="flex items-center justify-between pb-2 border-b border-[var(--border-color)]">
+            <div className="flex items-center gap-2">
+              <ListTodo size={14} className="text-[var(--muted-color)]" />
+              <h3 className="text-[10px] uppercase font-bold tracking-[0.2em] text-[var(--muted-color)]">Sub-tasks Checklist</h3>
+            </div>
+            {totalCount > 0 && (
+              <span className="text-[10px] font-mono font-bold text-[var(--ink-color)]">
+                {completedCount}/{totalCount} COMPLETED // {Math.round(progress)}%
+              </span>
+            )}
+          </div>
+
+          {totalCount > 0 && (
+            <div className="h-1 w-full bg-[var(--border-color)] overflow-hidden rounded-full">
+              <motion.div 
+                initial={{ width: 0 }}
+                animate={{ width: `${progress}%` }}
+                className="h-full bg-[var(--ink-color)]"
+              />
+            </div>
+          )}
+
+          <div className="space-y-3">
+            {(card.tasks || []).map((task) => (
+              <div key={task.id} className="flex items-center group/task">
+                <button 
+                  onClick={() => toggleTask(task.id)}
+                  className={cn(
+                    "p-1 mr-3 transition-colors",
+                    task.completed ? "text-emerald-500" : "text-[var(--border-color)] hover:text-[var(--muted-color)]"
+                  )}
+                >
+                  {task.completed ? <CheckSquare size={16} /> : <Circle size={16} />}
+                </button>
+                <span className={cn(
+                  "text-sm transition-all flex-1",
+                  task.completed ? "text-[var(--muted-color)] line-through opacity-50 font-serif italic" : "text-[var(--ink-color)]"
+                )}>
+                  {task.text}
+                </span>
+                <button 
+                  onClick={() => removeTask(task.id)}
+                  className="opacity-0 group-hover/task:opacity-100 p-1 text-[var(--muted-color)] hover:text-red-500 transition-all"
+                >
+                  <X size={12} />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <input 
+              type="text"
+              placeholder="assign mandatory sub-task..."
+              className="flex-1 bg-transparent border-b border-[var(--border-color)] py-2 text-xs text-[var(--ink-color)] placeholder:italic placeholder:opacity-50 focus:border-[var(--ink-color)] outline-none transition-colors"
+              value={taskInput}
+              onChange={(e) => setTaskInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addTask()}
+            />
+            <button 
+              onClick={addTask}
+              disabled={!taskInput.trim()}
+              className="px-4 py-2 text-[9px] font-bold uppercase tracking-widest bg-[var(--ink-color)] text-[var(--bg-color)] hover:opacity-90 disabled:opacity-30 transition-all border border-[var(--ink-color)]"
+            >
+              Assign
+            </button>
           </div>
         </div>
       </header>

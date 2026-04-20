@@ -43,6 +43,7 @@ export function useLogs() {
       title,
       description: '',
       tags,
+      tasks: [],
       status: 'todo',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -68,7 +69,7 @@ export function useLogs() {
     }));
   };
 
-  const addLog = (cardId: string, content: string, attachments: string[] = []) => {
+  const addLog = (cardId: string, content: string, attachments: (string | any)[] = []) => {
     const newLog: WorkLog = {
       id: uuidv4(),
       cardId,
@@ -87,7 +88,7 @@ export function useLogs() {
     }));
   };
 
-  const updateLog = (id: string, content: string, attachments: string[]) => {
+  const updateLog = (id: string, content: string, attachments: (string | any)[]) => {
     setState((prev) => ({
       ...prev,
       logs: prev.logs.map((l) =>
