@@ -32,7 +32,7 @@ interface CardDetailsProps {
   allTags: string[];
   onUpdateCard: (id: string, updates: Partial<JiraCard>) => void;
   onDeleteCard: (id: string) => void;
-  onAddLog: (cardId: string, content: string, attachments: (string | Attachment)[]) => void;
+  onAddLog: (cardId: string, content: string, attachments: (string | Attachment)[], linkedStatus?: JiraCard['status']) => void;
   onDeleteLog: (id: string) => void;
   onUpdateLog: (id: string, content: string, attachments: (string | Attachment)[]) => void;
 }
@@ -54,7 +54,8 @@ export default function CardDetails({
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isAddingLog, setIsAddingLog] = useState(false);
   const [isReaderMode, setIsReaderMode] = useState(false);
-  const [attachments, setAttachments] = useState<string[]>([]);
+  const [attachments, setAttachments] = useState<(string | Attachment)[]>([]);
+  const [selectedStatus, setSelectedStatus] = useState<JiraCard['status'] | 'none'>('none');
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
   const [summaryError, setSummaryError] = useState<string | null>(null);
@@ -111,9 +112,10 @@ export default function CardDetails({
 
   const handleAddLog = () => {
     if (!newLogContent.trim() && attachments.length === 0) return;
-    onAddLog(card.id, newLogContent, attachments);
+    onAddLog(card.id, newLogContent, attachments, selectedStatus === 'none' ? undefined : selectedStatus);
     setNewLogContent('');
     setAttachments([]);
+    setSelectedStatus('none');
     setIsAddingLog(false);
   };
 
@@ -382,6 +384,28 @@ export default function CardDetails({
               <h4 className="text-[9px] uppercase font-bold tracking-[0.2em] text-[var(--muted-color)] italic transition-colors">
                 {isReaderMode ? 'Previewing Snapshot...' : 'Drafting Entry...'}
               </h4>
+
+              {!isReaderMode && (
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] uppercase font-bold text-[var(--muted-color)] transition-colors">Link Status:</span>
+                  <div className="flex bg-[var(--bg-color)] border border-[var(--border-color)] p-0.5 rounded-sm transition-colors">
+                    {(['none', 'todo', 'in-progress', 'done'] as const).map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => setSelectedStatus(s)}
+                        className={cn(
+                          "px-2 py-1 text-[8px] uppercase font-bold tracking-widest transition-all",
+                          selectedStatus === s 
+                            ? "bg-[var(--ink-color)] text-[var(--bg-color)]" 
+                            : "text-[var(--muted-color)] hover:text-[var(--ink-color)]"
+                        )}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {isReaderMode ? (

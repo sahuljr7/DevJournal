@@ -69,13 +69,14 @@ export function useLogs() {
     }));
   };
 
-  const addLog = (cardId: string, content: string, attachments: (string | any)[] = []) => {
+  const addLog = (cardId: string, content: string, attachments: (string | any)[] = [], linkedStatus?: 'todo' | 'in-progress' | 'done') => {
     const newLog: WorkLog = {
       id: uuidv4(),
       cardId,
       content,
       timestamp: new Date().toISOString(),
       attachments,
+      linkedStatus,
     };
     setState((prev) => ({ ...prev, logs: [newLog, ...prev.logs] }));
     return newLog;

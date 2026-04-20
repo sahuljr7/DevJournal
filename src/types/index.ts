@@ -38,6 +38,7 @@ export interface WorkLog {
   content: string; // Markdown
   timestamp: string;
   attachments: (string | Attachment)[]; // Support both old and new format for migration safety
+  linkedStatus?: 'todo' | 'in-progress' | 'done';
 }
 
 export interface AppPreferences {

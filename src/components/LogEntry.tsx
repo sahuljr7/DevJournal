@@ -10,10 +10,19 @@ import {
   MessageSquare,
   Maximize2,
   Eye,
-  History as HistoryIcon
+  History as HistoryIcon,
+  ExternalLink,
+  Circle,
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  Download,
+  Loader2
 } from 'lucide-react';
+import JSZip from 'jszip';
+import { saveAs } from 'file-saver';
 import { WorkLog, Attachment, AttachmentVersion } from '../types';
-import { formatDate } from '../lib/utils';
+import { cn, formatDate } from '../lib/utils';
 import { motion } from 'motion/react';
 import { useState } from 'react';
 import RichEditor from './RichEditor';
@@ -30,6 +39,12 @@ export default function LogEntry({ log, onDelete, onUpdate }: LogEntryProps) {
   const [editContent, setEditContent] = useState(log.content);
   const [editAttachments, setEditAttachments] = useState<(string | Attachment)[]>(log.attachments);
   const [previewId, setPreviewId] = useState<string | null>(null);
+  const [expandedHistory, setExpandedHistory] = useState<Record<string, boolean>>({});
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const toggleHistory = (id: string) => {
+    setExpandedHistory(prev => ({ ...prev, [id]: !prev[id] }));
+  };
 
   const normalizeAttachment = (at: string | Attachment, index: number): Attachment => {
     if (typeof at === 'string') {
@@ -80,6 +95,45 @@ export default function LogEntry({ log, onDelete, onUpdate }: LogEntryProps) {
     setIsEditing(false);
   };
 
+  const handleDownloadAll = async () => {
+    if (log.attachments.length === 0) return;
+    setIsDownloading(true);
+    try {
+      const zip = new JSZip();
+      
+      const downloadPromises = log.attachments.map(async (at, index) => {
+        const norm = normalizeAttachment(at, index);
+        try {
+          if (norm.url.startsWith('data:')) {
+            const parts = norm.url.split(',');
+            const base64 = parts[1];
+            zip.file(norm.name, base64, { base64: true });
+          } else {
+            const response = await fetch(norm.url);
+            const blob = await response.blob();
+            zip.file(norm.name, blob);
+          }
+        } catch (err) {
+          console.error(`Failed to include ${norm.name} in archive:`, err);
+        }
+      });
+
+      await Promise.all(downloadPromises);
+      const content = await zip.generateAsync({ type: "blob" });
+      saveAs(content, `ledger-sources-${log.id.slice(0, 8)}.zip`);
+    } catch (err) {
+      console.error('Batch download failed:', err);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const statusIcons = {
+    'todo': <Circle size={10} className="text-neutral-400" />,
+    'in-progress': <Clock size={10} className="text-amber-500" />,
+    'done': <CheckCircle2 size={10} className="text-emerald-500" />,
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0 }}
@@ -90,6 +144,12 @@ export default function LogEntry({ log, onDelete, onUpdate }: LogEntryProps) {
         <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-[0.2em] text-[var(--muted-color)] transition-colors">
           <Clock size={10} strokeWidth={3} />
           {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} &bull; {formatDate(log.timestamp)}
+          {log.linkedStatus && (
+            <div className="flex items-center gap-1.5 ml-3 pl-3 border-l border-[var(--border-color)]">
+              {statusIcons[log.linkedStatus]}
+              <span className="italic text-[8px] tracking-widest">{log.linkedStatus}</span>
+            </div>
+          )}
           {isEditing && (
             <span className="ml-2 text-amber-500 italic lowercase tracking-tight font-serif text-[10px]">Editing Mode Active</span>
           )}
@@ -150,6 +210,23 @@ export default function LogEntry({ log, onDelete, onUpdate }: LogEntryProps) {
 
       {log.attachments.filter(Boolean).length > 0 && !isEditing && (
         <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-[var(--border-color)] transition-colors">
+          <div className="col-span-full mb-2 flex items-center justify-between">
+            <h5 className="text-[9px] uppercase font-bold tracking-[0.2em] text-[var(--muted-color)] italic transition-colors">
+              Consigned Sources // {log.attachments.length}
+            </h5>
+            <button
+              onClick={handleDownloadAll}
+              disabled={isDownloading}
+              className="group/dl flex items-center gap-1.5 text-[8px] uppercase font-bold tracking-widest text-[var(--muted-color)] hover:text-[var(--ink-color)] transition-all disabled:opacity-50"
+            >
+              {isDownloading ? (
+                <Loader2 size={10} className="animate-spin" />
+              ) : (
+                <Download size={10} className="group-hover/dl:translate-y-0.5 transition-transform" />
+              )}
+              {isDownloading ? 'Bundling...' : 'Download All (.zip)'}
+            </button>
+          </div>
           {log.attachments.filter(Boolean).map((at, i) => {
             const norm = normalizeAttachment(at, i);
             const isImage = norm.type.startsWith('image/');
@@ -194,34 +271,73 @@ export default function LogEntry({ log, onDelete, onUpdate }: LogEntryProps) {
                       >
                         <Maximize2 size={14} className="text-white" />
                       </a>
+                      <a 
+                        href={norm.url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="p-1.5 bg-white/20 hover:bg-white/40 rounded-full transition-colors text-white"
+                        title="View Source (New Tab)"
+                      >
+                        <ExternalLink size={14} />
+                      </a>
                     </div>
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-bold uppercase tracking-tight truncate text-[var(--ink-color)]">
-                      {norm.name}
-                    </p>
+                    <div className="flex items-start justify-between gap-2">
+                      <button 
+                        onClick={() => setPreviewId(isPreviewing ? null : norm.id)}
+                        className="text-[10px] font-bold uppercase tracking-tight truncate text-[var(--ink-color)] hover:underline block text-left flex-1"
+                      >
+                        {norm.name}
+                      </button>
+                      {isPdf && (
+                        <button
+                          onClick={() => setPreviewId(isPreviewing ? null : norm.id)}
+                          className={cn(
+                            "shrink-0 text-[7px] uppercase font-bold tracking-widest px-1.5 py-0.5 border transition-all",
+                            isPreviewing 
+                              ? "bg-[var(--ink-color)] text-[var(--bg-color)] border-[var(--ink-color)]" 
+                              : "bg-transparent text-[var(--muted-color)] border-[var(--border-color)] hover:border-[var(--ink-color)]"
+                          )}
+                        >
+                          {isPreviewing ? 'Hide' : 'PDF Preview'}
+                        </button>
+                      )}
+                    </div>
                     <p className="text-[8px] uppercase tracking-widest text-[var(--muted-color)] font-mono mb-1">
                        {norm.type.split('/')[1] || 'binary'} // {Math.round(norm.url.length / 1024)}KB
                     </p>
 
                     {norm.versions && norm.versions.length > 0 && (
-                      <div className="mb-2">
-                         <p className="text-[6px] uppercase font-bold text-[var(--muted-color)] flex items-center gap-1 mb-1 italic opacity-60">
-                          <HistoryIcon size={7} /> History Available
-                        </p>
-                        <div className="flex flex-wrap gap-1">
-                          {norm.versions.map((v, vi) => (
-                            <button 
-                              key={vi}
-                              onClick={() => handleVersionSwitch(i, v)}
-                              className="text-[7px] bg-[var(--secondary-bg)] border border-[var(--border-color)] px-1 py-0.5 hover:border-[var(--ink-color)] transition-colors opacity-50 hover:opacity-100"
-                              title={`Switch to: ${v.name}`}
-                            >
-                              v{vi + 1}
-                            </button>
-                          ))}
-                        </div>
+                      <div className="mt-2">
+                        <button 
+                          onClick={() => toggleHistory(norm.id)}
+                          className="flex items-center gap-1.5 text-[7px] uppercase font-bold text-[var(--muted-color)] hover:text-[var(--ink-color)] transition-colors opacity-70"
+                        >
+                          <HistoryIcon size={8} /> 
+                          {expandedHistory[norm.id] ? 'Hide History' : `View History (${norm.versions.length})`}
+                          {expandedHistory[norm.id] ? <ChevronUp size={8} /> : <ChevronDown size={8} />}
+                        </button>
+
+                        {expandedHistory[norm.id] && (
+                          <div className="mt-2 space-y-1 pl-2 border-l border-[var(--border-color)]">
+                            {norm.versions.map((v, vi) => (
+                              <button 
+                                key={vi}
+                                onClick={() => handleVersionSwitch(i, v)}
+                                className="group/v w-full flex items-center justify-between py-1 px-1.5 text-[7px] bg-[var(--secondary-bg)] border border-[var(--border-color)] hover:border-[var(--muted-color)] transition-all"
+                                title={`Restore version from ${new Date(v.timestamp).toLocaleString()}`}
+                              >
+                                <div className="flex flex-col items-start min-w-0">
+                                  <span className="font-bold truncate max-w-[100px]">{v.name}</span>
+                                  <span className="opacity-50 font-mono italic">{formatDate(v.timestamp)}</span>
+                                </div>
+                                <span className="opacity-0 group-hover/v:opacity-100 text-[6px] uppercase font-bold tracking-tighter text-amber-600 transition-opacity">Restore</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     )}
                     
@@ -235,9 +351,12 @@ export default function LogEntry({ log, onDelete, onUpdate }: LogEntryProps) {
                 </div>
 
                 {isPreviewing && (
-                  <div className="relative w-full aspect-video border border-[var(--border-color)] bg-black/5 flex items-center justify-center overflow-hidden group/preview">
+                  <div className={cn(
+                    "relative w-full border border-[var(--border-color)] bg-black/5 flex items-center justify-center overflow-hidden group/preview",
+                    isPdf ? "h-[600px]" : "aspect-video"
+                  )}>
                     {isPdf ? (
-                      <iframe src={norm.url} className="w-full h-full border-none" title={norm.name} />
+                      <iframe src={`${norm.url}#view=FitH`} className="w-full h-full border-none" title={norm.name} />
                     ) : isImage ? (
                       <ZoomableImage 
                         src={norm.url || undefined} 
