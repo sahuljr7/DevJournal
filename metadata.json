@@ -1,0 +1,6 @@
+{
+  "name": "DevJournal - Jira Work Logger",
+  "description": "A sophisticated work logging application for developers to track Jira card progress, documentation, and code snippets in a notebook-style interface.",
+  "requestFramePermissions": [],
+  "majorCapabilities": []
+}
