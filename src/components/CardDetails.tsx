@@ -56,6 +56,7 @@ export default function CardDetails({
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [newLogContent, setNewLogContent] = useState('');
+  const [linkInput, setLinkInput] = useState('');
   const [tagInput, setTagInput] = useState('');
   const [taskInput, setTaskInput] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -88,6 +89,27 @@ export default function CardDetails({
     onUpdateCard(card.id, { tags: newTags });
     setTagInput('');
     setShowSuggestions(false);
+  };
+
+  const handleAddLink = () => {
+    if (!linkInput.trim()) return;
+    
+    // Simple URL normalization
+    let url = linkInput.trim();
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'https://' + url;
+    }
+
+    const currentLinks = card.links || [];
+    if (!currentLinks.includes(url)) {
+      onUpdateCard(card.id, { links: [...currentLinks, url] });
+    }
+    setLinkInput('');
+  };
+
+  const removeLink = (urlToRemove: string) => {
+    const currentLinks = card.links || [];
+    onUpdateCard(card.id, { links: currentLinks.filter(l => l !== urlToRemove) });
   };
 
   const addTask = () => {
@@ -170,7 +192,27 @@ export default function CardDetails({
     doc.setFontSize(10);
     const splitDesc = doc.splitTextToSize(card.description || 'No description provided.', 170);
     doc.text(splitDesc, 20, yPos);
-    yPos += (splitDesc.length * 5) + 12;
+    yPos += (splitDesc.length * 5) + 8;
+
+    // Links & References
+    if (card.links && card.links.length > 0) {
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('External References:', 20, yPos);
+      yPos += 7;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(0, 0, 255);
+      card.links.forEach(link => {
+        if (yPos > 280) { doc.addPage(); yPos = 20; }
+        doc.text(link, 25, yPos);
+        yPos += 6;
+      });
+      doc.setTextColor(0, 0, 0);
+      yPos += 8;
+    } else {
+      yPos += 4;
+    }
 
     // Tasks
     if (card.tasks && card.tasks.length > 0) {
@@ -398,6 +440,39 @@ export default function CardDetails({
                 ))}
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Links & References Section */}
+        <div className="flex flex-wrap items-center gap-2 mt-4 pb-6 border-b border-[var(--border-color)]">
+          <ExternalLink size={12} className="text-[var(--muted-color)]" />
+          <div className="flex flex-wrap gap-2">
+            {(card.links || []).map((link, i) => (
+              <span key={i} className="flex items-center gap-1 px-2 py-0.5 border border-[var(--border-color)] text-[var(--muted-color)] text-[9px] uppercase font-bold tracking-widest italic transition-colors group/link">
+                <a href={link} target="_blank" rel="noopener noreferrer" className="hover:text-[var(--ink-color)] transition-colors line-clamp-1 max-w-[120px]">
+                  {link.replace(/^https?:\/\//, '')}
+                </a>
+                <button 
+                  onClick={() => removeLink(link)}
+                  className="opacity-0 group-hover/link:opacity-100 hover:text-red-500 transition-all p-0.5"
+                >
+                  <X size={8} />
+                </button>
+              </span>
+            ))}
+            <div className="relative">
+              <input 
+                placeholder="add reference url..."
+                className="text-[9px] bg-transparent border-none outline-none focus:ring-0 text-[var(--muted-color)] w-40 italic font-bold tracking-tighter"
+                value={linkInput}
+                onChange={(e) => setLinkInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleAddLink();
+                  }
+                }}
+              />
+            </div>
           </div>
         </div>
 

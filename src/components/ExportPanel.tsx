@@ -22,7 +22,7 @@ export default function ExportPanel({ state, onClose }: ExportPanelProps) {
 
   const exportCSV = () => {
     let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += "Jira ID,Title,Description,Status,Tags,Created At\n";
+    csvContent += "Jira ID,Title,Description,Status,Tags,Links,Created At\n";
     state.cards.forEach(card => {
       const row = [
         card.jiraId,
@@ -30,6 +30,7 @@ export default function ExportPanel({ state, onClose }: ExportPanelProps) {
         `"${(card.description || "").replace(/"/g, '""')}"`,
         card.status,
         `"${card.tags.join(', ')}"`,
+        `"${(card.links || []).join('; ')}"`,
         card.createdAt
       ].join(",");
       csvContent += row + "\n";

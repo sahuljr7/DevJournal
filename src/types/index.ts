@@ -13,6 +13,7 @@ export interface JiraCard {
   tags: string[];
   tasks: SubTask[];
   status: 'todo' | 'in-progress' | 'done';
+  links?: string[];
   createdAt: string;
   updatedAt: string;
 }
