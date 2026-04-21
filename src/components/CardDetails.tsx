@@ -54,6 +54,7 @@ export default function CardDetails({
   onUpdateLog,
 }: CardDetailsProps) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [newLogContent, setNewLogContent] = useState('');
   const [tagInput, setTagInput] = useState('');
   const [taskInput, setTaskInput] = useState('');
@@ -321,6 +322,34 @@ export default function CardDetails({
             >
               {card.title || 'Untitled Record'}
             </h2>
+          )}
+        </div>
+
+        <div className="group relative mt-2">
+          {isEditingDescription ? (
+            <textarea 
+              autoFocus
+              className="text-lg font-serif italic text-[var(--muted-color)] w-full bg-transparent border-none outline-none focus:ring-0 leading-relaxed resize-none h-auto min-h-[60px]"
+              value={card.description}
+              placeholder="consign record briefing..."
+              onChange={(e) => onUpdateCard(card.id, { description: e.target.value })}
+              onBlur={() => setIsEditingDescription(false)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  setIsEditingDescription(false);
+                }
+              }}
+            />
+          ) : (
+            <p 
+              onClick={() => setIsEditingDescription(true)}
+              className={cn(
+                "text-lg font-serif italic leading-relaxed cursor-text border-b border-transparent hover:border-[var(--muted-color)] transition-colors inline-block",
+                card.description ? "text-[var(--muted-color)]" : "text-[var(--muted-color)] opacity-30"
+              )}
+            >
+              {card.description || 'add technical briefing...'}
+            </p>
           )}
         </div>
 

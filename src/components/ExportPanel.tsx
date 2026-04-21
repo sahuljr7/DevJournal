@@ -22,11 +22,12 @@ export default function ExportPanel({ state, onClose }: ExportPanelProps) {
 
   const exportCSV = () => {
     let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += "Jira ID,Title,Status,Tags,Created At\n";
+    csvContent += "Jira ID,Title,Description,Status,Tags,Created At\n";
     state.cards.forEach(card => {
       const row = [
         card.jiraId,
         `"${card.title}"`,
+        `"${(card.description || "").replace(/"/g, '""')}"`,
         card.status,
         `"${card.tags.join(', ')}"`,
         card.createdAt
@@ -58,8 +59,19 @@ export default function ExportPanel({ state, onClose }: ExportPanelProps) {
       doc.setFont('helvetica', 'bold');
       doc.text(`${card.jiraId}: ${card.title}`, 14, y);
       y += 8;
+      
+      if (card.description) {
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(120);
+        const splitDesc = doc.splitTextToSize(card.description, 180);
+        doc.text(splitDesc, 14, y);
+        y += (splitDesc.length * 4) + 4;
+      }
+      
       doc.setFontSize(10);
       doc.setFont('helvetica', 'normal');
+      doc.setTextColor(0);
       doc.text(`Status: ${card.status} | Tags: ${card.tags.join(', ')}`, 14, y);
       y += 12;
 
