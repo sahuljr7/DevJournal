@@ -444,26 +444,17 @@ export default function CardDetails({
         </div>
 
         {/* Links & References Section */}
-        <div className="flex flex-wrap items-center gap-2 mt-4 pb-6 border-b border-[var(--border-color)]">
-          <ExternalLink size={12} className="text-[var(--muted-color)]" />
-          <div className="flex flex-wrap gap-2">
-            {(card.links || []).map((link, i) => (
-              <span key={i} className="flex items-center gap-1 px-2 py-0.5 border border-[var(--border-color)] text-[var(--muted-color)] text-[9px] uppercase font-bold tracking-widest italic transition-colors group/link">
-                <a href={link} target="_blank" rel="noopener noreferrer" className="hover:text-[var(--ink-color)] transition-colors line-clamp-1 max-w-[120px]">
-                  {link.replace(/^https?:\/\//, '')}
-                </a>
-                <button 
-                  onClick={() => removeLink(link)}
-                  className="opacity-0 group-hover/link:opacity-100 hover:text-red-500 transition-all p-0.5"
-                >
-                  <X size={8} />
-                </button>
-              </span>
-            ))}
-            <div className="relative">
+        <div className="mt-8 space-y-4 pb-8 border-b border-[var(--border-color)]">
+          <div className="flex items-center gap-2">
+            <ExternalLink size={14} className="text-[var(--muted-color)]" />
+            <h3 className="text-[10px] uppercase font-bold tracking-[0.2em] text-[var(--muted-color)] transition-colors">Links & References</h3>
+          </div>
+          
+          <div className="flex gap-2">
+            <div className="relative flex-1">
               <input 
-                placeholder="add reference url..."
-                className="text-[9px] bg-transparent border-none outline-none focus:ring-0 text-[var(--muted-color)] w-40 italic font-bold tracking-tighter"
+                placeholder="https://example.com"
+                className="w-full text-xs bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded-md px-4 py-2 outline-none focus:border-[var(--muted-color)] transition-all text-[var(--ink-color)]"
                 value={linkInput}
                 onChange={(e) => setLinkInput(e.target.value)}
                 onKeyDown={(e) => {
@@ -473,6 +464,33 @@ export default function CardDetails({
                 }}
               />
             </div>
+            <button 
+              onClick={handleAddLink}
+              className="px-6 py-2 bg-[var(--bg-color)] border border-[var(--border-color)] text-[var(--muted-color)] text-[10px] font-bold uppercase tracking-widest hover:text-[var(--ink-color)] hover:bg-[var(--secondary-bg)] transition-all rounded-md"
+            >
+              Add
+            </button>
+          </div>
+
+          <div className="space-y-2">
+            {(card.links || []).map((link, i) => (
+              <div key={i} className="flex items-center justify-between px-4 py-3 bg-[var(--bg-color)] border border-[var(--border-color)] rounded-md group/link hover:border-[var(--muted-color)] transition-all overflow-hidden">
+                <a 
+                  href={link} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="text-xs text-[var(--ink-color)] hover:underline transition-all truncate"
+                >
+                  {link}
+                </a>
+                <button 
+                  onClick={() => removeLink(link)}
+                  className="text-[var(--muted-color)] hover:text-red-500 transition-all p-1"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
           </div>
         </div>
 
