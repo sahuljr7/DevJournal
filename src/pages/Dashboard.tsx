@@ -92,26 +92,49 @@ export default function Dashboard() {
 
   return (
     <div className={cn(
-      "flex h-screen w-full font-sans transition-colors duration-300",
+      "flex h-screen w-full font-sans transition-colors duration-300 overflow-hidden",
       preferences.theme === 'dark' && "theme-dark",
       preferences.theme === 'high-contrast' && "theme-high-contrast",
       `font-style-${preferences.fontFamily}`
     )}>
+      {/* Sidebar Overlay for Mobile */}
+      <AnimatePresence>
+        {sidebarOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setSidebarOpen(false)}
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[45] lg:hidden"
+          />
+        )}
+      </AnimatePresence>
+
       {/* Sidebar */}
       <motion.aside
         initial={false}
-        animate={{ width: sidebarOpen ? 320 : 0, opacity: sidebarOpen ? 1 : 0 }}
+        animate={{ 
+          width: sidebarOpen ? (typeof window !== 'undefined' && window.innerWidth < 1024 ? '100%' : 320) : 0,
+          x: sidebarOpen ? 0 : -320,
+          opacity: sidebarOpen ? 1 : 0 
+        }}
         className={cn(
-          "relative h-full border-r border-[var(--border-color)] bg-[var(--bg-color)] opacity-95 overflow-hidden z-20 transition-colors duration-300",
-          !sidebarOpen && "border-none shadow-none"
+          "fixed lg:relative h-full border-r border-[var(--border-color)] bg-[var(--bg-color)] z-50 overflow-hidden transition-colors duration-300 shadow-2xl lg:shadow-none",
+          !sidebarOpen && "border-none"
         )}
       >
-        <div className="w-[320px] h-full flex flex-col">
+        <div className="w-[320px] max-w-full h-full flex flex-col">
           <Sidebar 
             cards={filteredCards}
             selectedCardId={selectedCardId}
-            onSelectCard={handleSelectCard}
-            onAddCard={handleCreateCard}
+            onSelectCard={(id) => {
+              handleSelectCard(id);
+              if (window.innerWidth < 1024) setSidebarOpen(false);
+            }}
+            onAddCard={() => {
+              handleCreateCard();
+              if (window.innerWidth < 1024) setSidebarOpen(false);
+            }}
             searchTerm={searchTerm}
             onSearchChange={setSearchTerm}
             onExport={() => setIsExporting(true)}
@@ -122,36 +145,35 @@ export default function Dashboard() {
         </div>
       </motion.aside>
 
-      {/* Collapse/Expand button */}
-      <button 
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        className="absolute bottom-6 left-6 z-30 p-2 bg-[var(--ink-color)] text-[var(--bg-color)] rounded-sm shadow-sm hover:scale-105 transition-all md:flex hidden"
-      >
-        {sidebarOpen ? <ChevronLeft size={18} /> : <ChevronRight size={18} />}
-      </button>
-
-      {/* Home Navigation button */}
-      <button 
-        onClick={() => navigate('/')}
-        className="absolute top-6 left-6 z-30 p-2 bg-[var(--bg-color)] border border-[var(--border-color)] text-[var(--ink-color)] rounded-sm shadow-sm hover:bg-[var(--secondary-bg)] transition-all flex items-center gap-2 text-[10px] uppercase font-bold tracking-widest"
-      >
-        <ArrowLeft size={14} />
-        Home
-      </button>
-
       {/* Main Content */}
-      <main className="flex-1 overflow-auto relative bg-[var(--bg-color)] transition-colors duration-300">
-        <header className="h-20 border-b border-[var(--border-color)] flex items-center justify-between px-12 bg-[var(--bg-color)] opacity-90 backdrop-blur-sm sticky top-0 z-10 transition-colors duration-300">
-          <div className="flex items-center space-x-4 pl-12">
-            <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse transition-colors duration-300"></span>
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--muted-color)] transition-colors duration-300">Ledger Active</span>
-          </div>
+      <main className="flex-1 overflow-auto relative bg-[var(--bg-color)] transition-colors duration-300 flex flex-col">
+        <header className="h-20 border-b border-[var(--border-color)] flex items-center justify-between px-4 lg:px-12 bg-[var(--bg-color)] opacity-90 backdrop-blur-sm sticky top-0 z-40 transition-colors duration-300">
           <div className="flex items-center space-x-4">
+            <button 
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="lg:hidden p-2 text-[var(--ink-color)] hover:bg-[var(--secondary-bg)] rounded-sm transition-colors"
+            >
+              <ArrowLeft className={cn("rotate-180 transition-transform", sidebarOpen && "rotate-0")} size={18} />
+            </button>
+            <div className="flex items-center space-x-4">
+              <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse transition-colors duration-300 hidden sm:block"></span>
+              <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--muted-color)] transition-colors duration-300">Ledger Active</span>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-4">
+            <button 
+              onClick={() => navigate('/')}
+              className="p-2 border border-[var(--border-color)] text-[var(--ink-color)] rounded-sm shadow-sm hover:bg-[var(--secondary-bg)] transition-all flex items-center gap-2 text-[10px] uppercase font-bold tracking-widest bg-[var(--bg-color)]"
+            >
+              <ArrowLeft size={14} />
+              <span className="hidden sm:inline">Home</span>
+            </button>
             <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--muted-color)] transition-colors duration-300">{filteredCards.length} records</span>
           </div>
         </header>
 
-        <div className="max-w-3xl mx-auto px-12 py-16 min-h-full">
+        <div className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-8 lg:px-12 py-8 lg:py-16">
           <AnimatePresence mode="wait">
             {selectedCard ? (
               <motion.div

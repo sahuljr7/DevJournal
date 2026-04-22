@@ -30,9 +30,9 @@ export default function Sidebar({
   return (
     <div className="flex flex-col h-full bg-[var(--bg-color)] backdrop-blur-md transition-colors duration-300">
       {/* Header */}
-      <div className="p-8 border-b border-[var(--border-color)]">
+      <div className="p-6 sm:p-8 border-b border-[var(--border-color)]">
         <div className="flex items-center justify-between mb-6">
-          <h1 className="text-[10px] font-bold uppercase tracking-[0.3em] text-[var(--muted-color)] transition-colors duration-300">Work Ledger // v1.0</h1>
+          <h1 className="text-[9px] sm:text-[10px] font-bold uppercase tracking-[0.2em] sm:tracking-[0.3em] text-[var(--muted-color)] transition-colors duration-300">Work Ledger // v1.0</h1>
           <div className="flex items-center gap-2">
             <button 
               onClick={onOpenSettings}

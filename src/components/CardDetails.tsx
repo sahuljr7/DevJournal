@@ -305,13 +305,13 @@ export default function CardDetails({
   return (
     <div className="space-y-12">
       {/* Header */}
-      <header className="border-b-2 border-[var(--border-color)] pb-12 transition-colors">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
+      <header className="border-b-2 border-[var(--border-color)] pb-8 sm:pb-12 transition-colors">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-6 sm:gap-0">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--muted-color)] transition-colors">Record No.</span>
               <span className="font-mono text-[10px] font-bold tracking-widest text-[var(--muted-color)] transition-colors">{card.jiraId}</span>
-              <div className="w-[1px] h-3 bg-[var(--border-color)] mx-2 transition-colors" />
+              <div className="w-[1px] h-3 bg-[var(--border-color)] mx-1 sm:mx-2 transition-colors" />
               <button 
                 onClick={() => {
                   const statusOrder: JiraCard['status'][] = ['todo', 'in-progress', 'done'];
@@ -327,14 +327,14 @@ export default function CardDetails({
             <span className="text-[9px] text-[var(--muted-color)] font-bold uppercase tracking-tighter transition-colors">Initiated // {formatDate(card.createdAt)}</span>
           </div>
           
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 self-end sm:self-auto">
             <button 
               onClick={downloadFullTaskPDF}
               className="flex items-center gap-1.5 px-3 py-1.5 border border-[var(--border-color)] text-[var(--muted-color)] text-[9px] font-bold uppercase tracking-widest hover:text-[var(--ink-color)] hover:border-[var(--ink-color)] transition-all rounded-sm"
               title="Download Full Task Report (PDF)"
             >
               <FileDown size={14} />
-              Export PDF
+              <span className="hidden sm:inline">Export PDF</span>
             </button>
             <div className="w-[1px] h-4 bg-[var(--border-color)] mx-1" />
             <button 
@@ -351,7 +351,7 @@ export default function CardDetails({
           {isEditingTitle ? (
             <input 
               autoFocus
-              className="text-5xl font-serif font-bold italic w-full bg-transparent border-none outline-none focus:ring-0 leading-tight text-[var(--ink-color)]"
+              className="text-3xl sm:text-5xl font-serif font-bold italic w-full bg-transparent border-none outline-none focus:ring-0 leading-tight text-[var(--ink-color)]"
               value={card.title}
               onChange={(e) => onUpdateCard(card.id, { title: e.target.value })}
               onBlur={() => setIsEditingTitle(false)}
@@ -360,7 +360,7 @@ export default function CardDetails({
           ) : (
             <h2 
               onClick={() => setIsEditingTitle(true)}
-              className="text-5xl font-serif font-bold italic mb-6 leading-tight cursor-text border-b border-transparent hover:border-[var(--muted-color)] transition-colors inline-block text-[var(--ink-color)]"
+              className="text-3xl sm:text-5xl font-serif font-bold italic mb-6 leading-tight cursor-text border-b border-transparent hover:border-[var(--muted-color)] transition-colors inline-block text-[var(--ink-color)]"
             >
               {card.title || 'Untitled Record'}
             </h2>
@@ -371,7 +371,7 @@ export default function CardDetails({
           {isEditingDescription ? (
             <textarea 
               autoFocus
-              className="text-lg font-serif italic text-[var(--muted-color)] w-full bg-transparent border-none outline-none focus:ring-0 leading-relaxed resize-none h-auto min-h-[60px]"
+              className="text-base sm:text-lg font-serif italic text-[var(--muted-color)] w-full bg-transparent border-none outline-none focus:ring-0 leading-relaxed resize-none h-auto min-h-[60px]"
               value={card.description}
               placeholder="consign record briefing..."
               onChange={(e) => onUpdateCard(card.id, { description: e.target.value })}
@@ -386,7 +386,7 @@ export default function CardDetails({
             <p 
               onClick={() => setIsEditingDescription(true)}
               className={cn(
-                "text-lg font-serif italic leading-relaxed cursor-text border-b border-transparent hover:border-[var(--muted-color)] transition-colors inline-block",
+                "text-base sm:text-lg font-serif italic leading-relaxed cursor-text border-b border-transparent hover:border-[var(--muted-color)] transition-colors inline-block",
                 card.description ? "text-[var(--muted-color)]" : "text-[var(--muted-color)] opacity-30"
               )}
             >

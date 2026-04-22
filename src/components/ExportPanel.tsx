@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
 import { X, FileJson, FileText, Download, Briefcase } from 'lucide-react';
 import { AppState } from '../types';
+import { cn } from '../lib/utils';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 
@@ -114,51 +115,54 @@ export default function ExportPanel({ state, onClose }: ExportPanelProps) {
         <X size={32} />
       </button>
 
-      <div className="max-w-xl w-full bg-[var(--bg-color)] border border-[var(--border-color)] rounded-2xl shadow-2xl p-12" onClick={(e) => e.stopPropagation()}>
-        <div className="text-center mb-16">
+      <div className="max-w-xl w-full bg-[var(--bg-color)] border border-[var(--border-color)] rounded-2xl shadow-2xl p-6 sm:p-12" onClick={(e) => e.stopPropagation()}>
+        <div className="text-center mb-10 sm:mb-16">
           <Briefcase size={32} className="mx-auto text-[var(--muted-color)] mb-6 transition-colors" />
-          <h2 className="text-3xl font-serif italic text-[var(--ink-color)] mb-4 tracking-tight transition-colors">Export Workspace</h2>
-          <p className="text-[var(--muted-color)] text-sm max-w-sm mx-auto transition-colors">
+          <h2 className="text-2xl sm:text-3xl font-serif italic text-[var(--ink-color)] mb-4 tracking-tight transition-colors">Export Workspace</h2>
+          <p className="text-[var(--muted-color)] text-sm max-w-sm mx-auto transition-colors px-4">
             Securely export your documentation in multiple formats for archiving or reporting.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6">
           <button 
             onClick={exportJSON}
-            className="flex flex-col items-center gap-4 p-6 bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded-xl hover:border-[var(--muted-color)] transition-all group"
+            className="flex flex-col items-center gap-4 p-4 sm:p-6 bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded-xl hover:border-[var(--muted-color)] transition-all group"
           >
-            <div className="p-3 bg-blue-500/20 text-blue-500 rounded-lg group-hover:scale-110 transition-transform">
-              <FileJson size={24} />
+            <div className="p-2 sm:p-3 bg-blue-500/20 text-blue-500 rounded-lg group-hover:scale-110 transition-transform">
+              <FileJson size={20} className="sm:size-[24px]" />
             </div>
             <div className="text-center">
-              <h3 className="text-[var(--ink-color)] font-bold text-[10px] mb-1 uppercase tracking-widest transition-colors">JSON</h3>
+              <h3 className="text-[var(--ink-color)] font-bold text-[9px] sm:text-[10px] mb-1 uppercase tracking-widest transition-colors">JSON</h3>
               <p className="text-[var(--muted-color)] text-[8px] transition-colors">Backup</p>
             </div>
           </button>
 
           <button 
             onClick={exportCSV}
-            className="flex flex-col items-center gap-4 p-6 bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded-xl hover:border-[var(--muted-color)] transition-all group"
+            className="flex flex-col items-center gap-4 p-4 sm:p-6 bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded-xl hover:border-[var(--muted-color)] transition-all group"
           >
-            <div className="p-3 bg-emerald-500/20 text-emerald-500 rounded-lg group-hover:scale-110 transition-transform">
-              <FileText size={24} />
+            <div className="p-2 sm:p-3 bg-emerald-500/20 text-emerald-500 rounded-lg group-hover:scale-110 transition-transform">
+              <FileText size={20} className="sm:size-[24px]" />
             </div>
             <div className="text-center">
-              <h3 className="text-[var(--ink-color)] font-bold text-[10px] mb-1 uppercase tracking-widest transition-colors">CSV</h3>
+              <h3 className="text-[var(--ink-color)] font-bold text-[9px] sm:text-[10px] mb-1 uppercase tracking-widest transition-colors">CSV</h3>
               <p className="text-[var(--muted-color)] text-[8px] transition-colors">Sheets</p>
             </div>
           </button>
 
           <button 
             onClick={exportPDF}
-            className="flex flex-col items-center gap-4 p-6 bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded-xl hover:border-[var(--muted-color)] transition-all group"
+            className={cn(
+              "flex flex-col items-center gap-4 p-4 sm:p-6 bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded-xl hover:border-[var(--muted-color)] transition-all group",
+              "col-span-2 sm:col-span-1" // Make PDF wider on tiny screens
+            )}
           >
-            <div className="p-3 bg-rose-500/20 text-rose-500 rounded-lg group-hover:scale-110 transition-transform">
-              <Download size={24} />
+            <div className="p-2 sm:p-3 bg-rose-500/20 text-rose-500 rounded-lg group-hover:scale-110 transition-transform">
+              <Download size={20} className="sm:size-[24px]" />
             </div>
             <div className="text-center">
-              <h3 className="text-[var(--ink-color)] font-bold text-[10px] mb-1 uppercase tracking-widest transition-colors">PDF</h3>
+              <h3 className="text-[var(--ink-color)] font-bold text-[9px] sm:text-[10px] mb-1 uppercase tracking-widest transition-colors">PDF</h3>
               <p className="text-[var(--muted-color)] text-[8px] transition-colors">Print</p>
             </div>
           </button>
