@@ -1,6 +1,7 @@
 import React, { useCallback } from 'react';
 import MdEditor from 'react-markdown-editor-lite';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import 'react-markdown-editor-lite/lib/index.css';
 import { useDropzone } from 'react-dropzone';
 import { 
@@ -75,15 +76,28 @@ export default function RichEditor({
     onChange(text);
   };
 
+  const onImageUpload = useCallback(async (file: File) => {
+    const at = await onFileUpload(file);
+    if (onAttachmentsChange) {
+      onAttachmentsChange(prev => [...prev, at]);
+    }
+    return at.url;
+  }, [onFileUpload, onAttachmentsChange]);
+
   const handleFile = useCallback(async (file: File) => {
+    // If it's an image and we're dropping it into the dropzone (not directly into the editor)
+    // we still want to track it as an attachment, but maybe we shouldn't auto-insert 
+    // into markdown if it's redundant.
+    // However, if the user dropped it outside the editor text area, they expect it to be 
+    // added to the attachments list at least.
+    
     const attachment = await onFileUpload(file);
     
-    // Add to attachments if callback provided
     if (onAttachmentsChange) {
       onAttachmentsChange(prev => [...prev, attachment]);
     }
 
-    // Also insert into markdown if it's an image
+    // Only auto-insert into markdown if it's an image AND not handled by the editor component
     if (file.type.startsWith('image/')) {
       const imageMarkdown = `\n![${file.name}](${attachment.url})\n`;
       onChange(value + imageMarkdown);
@@ -209,13 +223,20 @@ export default function RichEditor({
         <MdEditor
           value={value}
           style={{ height: '400px', border: 'none', backgroundColor: 'var(--bg-color)', color: 'var(--ink-color)' }}
-          renderHTML={(text) => <ReactMarkdown components={{ img: ZoomableImage }}>{text}</ReactMarkdown>}
+          renderHTML={(text) => (
+            <div className="prose prose-neutral max-w-none text-base p-6 markdown-body">
+              <ReactMarkdown 
+                remarkPlugins={[remarkGfm]}
+                components={{ 
+                  img: (props) => <ZoomableImage {...props} className="max-w-full h-auto rounded-sm border border-[var(--border-color)]" />
+                }}
+              >
+                {text}
+              </ReactMarkdown>
+            </div>
+          )}
           onChange={handleEditorChange}
-          onImageUpload={async (file) => {
-            const at = await onFileUpload(file);
-            if (onAttachmentsChange) onAttachmentsChange(prev => [...prev, at]);
-            return at.url;
-          }}
+          onImageUpload={onImageUpload}
           config={{
             view: { menu: true, md: true, html: false },
             canView: { menu: true, md: true, html: true, fullScreen: true, hideMenu: false },

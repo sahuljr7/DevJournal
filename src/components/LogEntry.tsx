@@ -1,4 +1,5 @@
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { 
   Trash2, 
   Clock, 
@@ -209,8 +210,15 @@ export default function LogEntry({ log, onDelete, onUpdate }: LogEntryProps) {
           />
         </div>
       ) : (
-        <div className="prose prose-neutral max-w-none text-lg leading-relaxed text-[var(--ink-color)] transition-colors">
-          <ReactMarkdown components={{ img: ZoomableImage }}>{log.content}</ReactMarkdown>
+        <div className="prose prose-neutral max-w-none text-lg leading-relaxed text-[var(--ink-color)] transition-colors markdown-body">
+          <ReactMarkdown 
+            remarkPlugins={[remarkGfm]}
+            components={{ 
+              img: (props) => <ZoomableImage {...props} className="max-w-full h-auto rounded-sm border border-[var(--border-color)] my-8" />
+            }}
+          >
+            {log.content}
+          </ReactMarkdown>
         </div>
       )}
 
