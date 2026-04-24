@@ -18,13 +18,18 @@ import {
   CheckSquare,
   FileDown,
   FileArchive,
-  Download
+  Download,
+  Filter,
+  ArrowUpDown,
+  Search,
+  Save,
+  ChevronDown
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { jsPDF } from 'jspdf';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
-import { JiraCard, WorkLog, Attachment } from '../types';
+import { JiraCard, WorkLog, Attachment, LogTemplate, SubTask } from '../types';
 import { cn, formatDate } from '../lib/utils';
 import RichEditor from './RichEditor';
 import LogEntry from './LogEntry';
@@ -67,6 +72,21 @@ export default function CardDetails({
   const [isSummarizing, setIsSummarizing] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
   const [summaryError, setSummaryError] = useState<string | null>(null);
+  
+  // Filtering states
+  const [logSearchQuery, setLogSearchQuery] = useState('');
+  const [logStatusFilter, setLogStatusFilter] = useState<'all' | JiraCard['status']>('all');
+  const [logSortOrder, setLogSortOrder] = useState<'newest' | 'oldest'>('newest');
+
+  // Templates
+  const [templates, setTemplates] = useState<LogTemplate[]>(() => {
+    const saved = localStorage.getItem('log_templates');
+    return saved ? JSON.parse(saved) : [
+      { id: 't1', name: 'Standard Update', content: '### Objective\n\n### Actions Taken\n\n### Next Steps' },
+      { id: 't2', name: 'Bug Investigation', content: '### Reproduced\n\n### Root Cause Analysis\n\n### Proposed Fix' }
+    ];
+  });
+  const [showTemplateMenu, setShowTemplateMenu] = useState(false);
 
   const handleUpdateTags = (tagsStr: string) => {
     const tags = Array.from(new Set(tagsStr.split(',').map(t => t.trim().toLowerCase()).filter(Boolean)));
@@ -125,7 +145,14 @@ export default function CardDetails({
 
   const toggleTask = (taskId: string) => {
     const newTasks = (card.tasks || []).map(t => 
-      t.id === taskId ? { ...t, completed: !t.completed } : t
+      t.id === taskId ? { ...t, completed: !t.completed, status: (!t.completed ? 'completed' : 'pending') as SubTask['status'] } : t
+    );
+    onUpdateCard(card.id, { tasks: newTasks });
+  };
+
+  const updateSubTaskStatus = (taskId: string, status: SubTask['status']) => {
+    const newTasks = (card.tasks || []).map(t => 
+      t.id === taskId ? { ...t, status, completed: status === 'completed' } : t
     );
     onUpdateCard(card.id, { tasks: newTasks });
   };
@@ -138,6 +165,36 @@ export default function CardDetails({
   const completedCount = (card.tasks || []).filter(t => t.completed).length;
   const totalCount = (card.tasks || []).length;
   const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
+
+  const handleSaveTemplate = () => {
+    const name = prompt('Template Name:');
+    if (!name || !newLogContent.trim()) return;
+    const newTemplate: LogTemplate = {
+      id: uuidv4(),
+      name,
+      content: newLogContent
+    };
+    const updated = [...templates, newTemplate];
+    setTemplates(updated);
+    localStorage.setItem('log_templates', JSON.stringify(updated));
+  };
+
+  const applyTemplate = (template: LogTemplate) => {
+    setNewLogContent(template.content);
+    setShowTemplateMenu(false);
+  };
+
+  const filteredLogs = logs
+    .filter(log => {
+      const matchesSearch = log.content.toLowerCase().includes(logSearchQuery.toLowerCase());
+      const matchesStatus = logStatusFilter === 'all' || log.linkedStatus === logStatusFilter;
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      const timeA = new Date(a.timestamp).getTime();
+      const timeB = new Date(b.timestamp).getTime();
+      return logSortOrder === 'newest' ? timeB - timeA : timeA - timeB;
+    });
 
   const handleAddLog = () => {
     if (!newLogContent.trim() && attachments.length === 0) return;
@@ -520,11 +577,11 @@ export default function CardDetails({
 
           <div className="space-y-3">
             {(card.tasks || []).map((task) => (
-              <div key={task.id} className="flex items-center group/task">
+              <div key={task.id} className="flex items-center group/task gap-2">
                 <button 
                   onClick={() => toggleTask(task.id)}
                   className={cn(
-                    "p-1 mr-3 transition-colors",
+                    "p-1 transition-colors",
                     task.completed ? "text-emerald-500" : "text-[var(--border-color)] hover:text-[var(--muted-color)]"
                   )}
                 >
@@ -536,6 +593,24 @@ export default function CardDetails({
                 )}>
                   {task.text}
                 </span>
+                
+                <div className="flex bg-[var(--bg-color)] border border-[var(--border-color)] p-0.5 rounded-sm opacity-0 group-hover/task:opacity-100 transition-opacity">
+                  {(['pending', 'active', 'blocked', 'completed'] as const).map((s) => (
+                    <button
+                      key={s}
+                      onClick={() => updateSubTaskStatus(task.id, s)}
+                      className={cn(
+                        "px-1.5 py-0.5 text-[7px] uppercase font-bold tracking-widest transition-all",
+                        task.status === s || (task.completed && s === 'completed') || (!task.status && !task.completed && s === 'pending')
+                          ? "bg-[var(--ink-color)] text-[var(--bg-color)]" 
+                          : "text-[var(--muted-color)] hover:text-[var(--ink-color)]"
+                      )}
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+
                 <button 
                   onClick={() => removeTask(task.id)}
                   className="opacity-0 group-hover/task:opacity-100 p-1 text-[var(--muted-color)] hover:text-red-500 transition-all"
@@ -568,71 +643,113 @@ export default function CardDetails({
 
       {/* Logs Section */}
       <section className="space-y-12 pb-32">
-        <div className="flex items-center justify-between border-b border-[var(--border-color)] pb-4 transition-colors">
-          <div className="flex items-center gap-2 text-[var(--muted-color)] transition-colors">
-            <History size={16} />
-            <h3 className="text-[10px] font-bold uppercase tracking-[0.3em]">Documentation Ledger</h3>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            {/* AI Summary Button */}
-            {logs.length > 0 && (
-              <button 
-                onClick={handleSummarize}
-                disabled={isSummarizing}
-                className={cn(
-                  "flex items-center gap-2 px-3 py-1.5 border border-[var(--border-color)] transition-all rounded-sm text-[9px] font-bold uppercase tracking-widest text-[var(--muted-color)] hover:border-[var(--ink-color)] hover:text-[var(--ink-color)] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed",
-                  summary && "border-amber-500/50 text-amber-600 dark:text-amber-400"
-                )}
-                title="Generate AI Summary"
-              >
-                {isSummarizing ? (
-                  <Loader2 size={12} className="animate-spin" />
-                ) : (
-                  <Sparkles size={12} />
-                )}
-                {isSummarizing ? 'Processing...' : summary ? 'Update Summary' : 'Summarize'}
-              </button>
-            )}
-
-            {/* Mode Toggle */}
-            <button 
-              onClick={() => setIsReaderMode(!isReaderMode)}
-              className={cn(
-                "flex items-center gap-2 px-3 py-1.5 border transition-all rounded-sm text-[9px] font-bold uppercase tracking-widest",
-                isReaderMode 
-                  ? "bg-[var(--ink-color)] text-[var(--bg-color)] border-[var(--ink-color)]" 
-                  : "bg-transparent text-[var(--muted-color)] border-[var(--border-color)] hover:border-[var(--muted-color)]"
-              )}
-              title={isReaderMode ? "Switch to Editor" : "Switch to Preview"}
-            >
-              {isReaderMode ? <Eye size={12} /> : <EyeOff size={12} />}
-              {isReaderMode ? 'Reader Active' : 'Preview Mode'}
-            </button>
-
-            {!isAddingLog && !isReaderMode && (
-              <div className="flex items-center">
-                {logs.length > 0 && (
-                  <>
-                    <button 
-                      onClick={downloadAllTextLogs}
-                      className="px-3 py-1.5 border border-[var(--border-color)] text-[var(--muted-color)] text-[8px] font-bold uppercase tracking-widest hover:text-[var(--ink-color)] transition-all flex items-center gap-1.5"
-                      title="Archive All Text Entries (.zip)"
-                    >
-                      <FileArchive size={10} />
-                      Log Archive
-                    </button>
-                    <div className="w-[1px] h-3 bg-[var(--border-color)] mx-2" />
-                  </>
-                )}
+        <div className="flex flex-col gap-6 border-b border-[var(--border-color)] pb-6 transition-colors">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-[var(--muted-color)] transition-colors">
+              <History size={16} />
+              <h3 className="text-[10px] font-bold uppercase tracking-[0.3em]">Documentation Ledger</h3>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              {/* AI Summary Button */}
+              {logs.length > 0 && (
                 <button 
-                  onClick={() => setIsAddingLog(true)}
-                  className="px-4 py-2 border border-[var(--border-color)] text-[var(--ink-color)] text-[9px] font-bold uppercase tracking-widest hover:bg-[var(--secondary-bg)] transition-colors"
+                  onClick={handleSummarize}
+                  disabled={isSummarizing}
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-1.5 border border-[var(--border-color)] transition-all rounded-sm text-[9px] font-bold uppercase tracking-widest text-[var(--muted-color)] hover:border-[var(--ink-color)] hover:text-[var(--ink-color)] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed",
+                    summary && "border-amber-500/50 text-amber-600 dark:text-amber-400"
+                  )}
+                  title="Generate AI Summary"
                 >
-                  + New Entry
+                  {isSummarizing ? (
+                    <Loader2 size={12} className="animate-spin" />
+                  ) : (
+                    <Sparkles size={12} />
+                  )}
+                  {isSummarizing ? 'Processing...' : summary ? 'Update Summary' : 'Summarize'}
                 </button>
+              )}
+
+              {/* Mode Toggle */}
+              <button 
+                onClick={() => setIsReaderMode(!isReaderMode)}
+                className={cn(
+                  "flex items-center gap-2 px-3 py-1.5 border transition-all rounded-sm text-[9px] font-bold uppercase tracking-widest",
+                  isReaderMode 
+                    ? "bg-[var(--ink-color)] text-[var(--bg-color)] border-[var(--ink-color)]" 
+                    : "bg-transparent text-[var(--muted-color)] border-[var(--border-color)] hover:border-[var(--muted-color)]"
+                )}
+                title={isReaderMode ? "Switch to Editor" : "Switch to Preview"}
+              >
+                {isReaderMode ? <Eye size={12} /> : <EyeOff size={12} />}
+                {isReaderMode ? 'Reader Active' : 'Preview Mode'}
+              </button>
+
+              {!isAddingLog && !isReaderMode && (
+                <div className="flex items-center">
+                  {logs.length > 0 && (
+                    <>
+                      <button 
+                        onClick={downloadAllTextLogs}
+                        className="px-3 py-1.5 border border-[var(--border-color)] text-[var(--muted-color)] text-[8px] font-bold uppercase tracking-widest hover:text-[var(--ink-color)] transition-all flex items-center gap-1.5"
+                        title="Archive All Text Entries (.zip)"
+                      >
+                        <FileArchive size={10} />
+                        Log Archive
+                      </button>
+                      <div className="w-[1px] h-3 bg-[var(--border-color)] mx-2" />
+                    </>
+                  )}
+                  <button 
+                    onClick={() => setIsAddingLog(true)}
+                    className="px-4 py-2 border border-[var(--border-color)] text-[var(--ink-color)] text-[9px] font-bold uppercase tracking-widest hover:bg-[var(--secondary-bg)] transition-colors"
+                  >
+                    + New Entry
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex-1 min-w-[200px] relative">
+              <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--muted-color)]" />
+              <input 
+                placeholder="Search entries..."
+                className="w-full text-[10px] bg-[var(--secondary-bg)] border border-[var(--border-color)] rounded-sm pl-10 pr-4 py-2 outline-none focus:border-[var(--muted-color)] transition-all text-[var(--ink-color)] font-bold uppercase tracking-widest"
+                value={logSearchQuery}
+                onChange={(e) => setLogSearchQuery(e.target.value)}
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Filter size={14} className="text-[var(--muted-color)]" />
+              <div className="flex bg-[var(--bg-color)] border border-[var(--border-color)] p-0.5 rounded-sm">
+                {(['all', 'todo', 'in-progress', 'done'] as const).map((s) => (
+                  <button
+                    key={s}
+                    onClick={() => setLogStatusFilter(s)}
+                    className={cn(
+                      "px-3 py-1.5 text-[8px] uppercase font-bold tracking-widest transition-all",
+                      logStatusFilter === s 
+                        ? "bg-[var(--ink-color)] text-[var(--bg-color)]" 
+                        : "text-[var(--muted-color)] hover:text-[var(--ink-color)]"
+                    )}
+                  >
+                    {s}
+                  </button>
+                ))}
               </div>
-            )}
+            </div>
+
+            <button 
+              onClick={() => setLogSortOrder(logSortOrder === 'newest' ? 'oldest' : 'newest')}
+              className="flex items-center gap-2 px-3 py-2 border border-[var(--border-color)] text-[8px] font-bold uppercase tracking-widest text-[var(--muted-color)] hover:text-[var(--ink-color)] transition-all"
+            >
+              <ArrowUpDown size={12} />
+              {logSortOrder}
+            </button>
           </div>
         </div>
 
@@ -647,35 +764,73 @@ export default function CardDetails({
               </h4>
 
               {!isReaderMode && (
-                <div className="flex items-center gap-2">
-                  <span className="text-[9px] uppercase font-bold text-[var(--muted-color)] transition-colors">Link Status:</span>
-                  <div className="flex bg-[var(--bg-color)] border border-[var(--border-color)] p-0.5 rounded-sm transition-colors">
-                    {(['none', 'todo', 'in-progress', 'done'] as const).map((s) => (
-                      <button
-                        key={s}
-                        onClick={() => setSelectedStatus(s)}
-                        className={cn(
-                          "px-2 py-1 text-[8px] uppercase font-bold tracking-widest transition-all",
-                          selectedStatus === s 
-                            ? "bg-[var(--ink-color)] text-[var(--bg-color)]" 
-                            : "text-[var(--muted-color)] hover:text-[var(--ink-color)]"
-                        )}
-                      >
-                        {s}
-                      </button>
-                    ))}
+                <div className="flex items-center gap-4">
+                  {/* Template Selector */}
+                  <div className="relative">
+                    <button 
+                      onClick={() => setShowTemplateMenu(!showTemplateMenu)}
+                      className="flex items-center gap-2 px-3 py-1 text-[8px] uppercase font-bold tracking-widest text-[var(--muted-color)] hover:text-[var(--ink-color)] border border-[var(--border-color)] rounded-sm transition-all"
+                    >
+                      Templates
+                      <ChevronDown size={10} />
+                    </button>
+                    
+                    {showTemplateMenu && (
+                      <div className="absolute right-0 top-full mt-1 w-48 bg-[var(--bg-color)] border border-[var(--border-color)] shadow-xl z-50 animate-in fade-in slide-in-from-top-1 duration-200">
+                        {templates.map((template) => (
+                          <button
+                            key={template.id}
+                            className="w-full text-left px-3 py-2 text-[8px] uppercase font-bold tracking-widest text-[var(--muted-color)] hover:bg-[var(--secondary-bg)] hover:text-[var(--ink-color)] border-b last:border-0 border-[var(--border-color)] transition-colors"
+                            onClick={() => applyTemplate(template)}
+                          >
+                            {template.name}
+                          </button>
+                        ))}
+                        <button 
+                          onClick={handleSaveTemplate}
+                          className="w-full text-left px-3 py-2 text-[8px] uppercase font-bold tracking-widest text-amber-600 hover:bg-amber-500/10 transition-colors flex items-center gap-2"
+                        >
+                          <Save size={10} />
+                          Save as Template
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] uppercase font-bold text-[var(--muted-color)] transition-colors">Link Status:</span>
+                    <div className="flex bg-[var(--bg-color)] border border-[var(--border-color)] p-0.5 rounded-sm transition-colors">
+                      {(['none', 'todo', 'in-progress', 'done'] as const).map((s) => (
+                        <button
+                          key={s}
+                          onClick={() => setSelectedStatus(s)}
+                          className={cn(
+                            "px-2 py-1 text-[8px] uppercase font-bold tracking-widest transition-all",
+                            selectedStatus === s 
+                              ? "bg-[var(--ink-color)] text-[var(--bg-color)]" 
+                              : "text-[var(--muted-color)] hover:text-[var(--ink-color)]"
+                          )}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
             </div>
 
             {isReaderMode ? (
-              <div className="prose prose-neutral max-w-none text-lg leading-relaxed text-[var(--ink-color)] font-serif italic opacity-80 py-4 transition-colors">
-                {newLogContent ? (
-                  <ReactMarkdown components={{ img: ZoomableImage }}>{newLogContent}</ReactMarkdown>
-                ) : (
-                  <p className="opacity-40">Entry is currently empty...</p>
-                )}
+              <div className="max-w-3xl mx-auto py-12 px-6 bg-[var(--bg-color)] shadow-sm border border-[var(--border-color)] min-h-[400px]">
+                <div className="prose prose-neutral max-w-none text-xl leading-relaxed text-[var(--ink-color)] font-serif italic opacity-90 transition-colors markdown-body">
+                  {newLogContent ? (
+                    <ReactMarkdown components={{ img: ZoomableImage }}>{newLogContent}</ReactMarkdown>
+                  ) : (
+                    <div className="flex items-center justify-center h-40 text-[var(--muted-color)] text-sm opacity-40">
+                      Draft is currently void of content...
+                    </div>
+                  )}
+                </div>
               </div>
             ) : (
               <RichEditor 
@@ -739,8 +894,8 @@ export default function CardDetails({
         )}
 
         <div className="space-y-12">
-          {logs.length > 0 ? (
-            logs.map((log) => (
+          {filteredLogs.length > 0 ? (
+            filteredLogs.map((log) => (
               <LogEntry 
                 key={log.id} 
                 log={log} 
@@ -749,9 +904,9 @@ export default function CardDetails({
               />
             ))
           ) : (
-            !isAddingLog && (
+            (logs.length > 0 || !isAddingLog) && (
               <div className="py-20 text-center border border-[var(--border-color)] bg-[var(--secondary-bg)] rounded-sm text-[var(--muted-color)] italic font-serif text-sm transition-colors">
-                The ledger for this record is currently empty.
+                {logs.length === 0 ? 'The ledger for this record is currently empty.' : 'No entries matching current filters found.'}
               </div>
             )
           )}

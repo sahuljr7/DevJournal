@@ -3,6 +3,13 @@ export interface SubTask {
   id: string;
   text: string;
   completed: boolean;
+  status?: 'pending' | 'active' | 'blocked' | 'completed';
+}
+
+export interface LogTemplate {
+  id: string;
+  name: string;
+  content: string;
 }
 
 export interface JiraCard {
