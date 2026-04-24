@@ -22,6 +22,7 @@ import {
 import { cn, formatDate } from '../lib/utils';
 import { Attachment } from '../types';
 import { v4 as uuidv4 } from 'uuid';
+import { useAppContext } from '../context/AppContext';
 import ImageOverlay, { ZoomableImage } from './ImageOverlay';
 
 interface RichEditorProps {
@@ -37,6 +38,8 @@ export default function RichEditor({
   attachments = [], 
   onAttachmentsChange 
 }: RichEditorProps) {
+  const { preferences } = useAppContext();
+  const editorRef = React.useRef<any>(null);
   const [previewId, setPreviewId] = React.useState<string | null>(null);
   const [expandedHistory, setExpandedHistory] = React.useState<Record<string, boolean>>({});
 
@@ -194,15 +197,53 @@ export default function RichEditor({
   // Handle paste from clipboard
   const handlePaste = useCallback(async (event: React.ClipboardEvent) => {
     const items = event.clipboardData.items;
+    let isImagesHandled = false;
+
+    // First check for files (images/pdfs)
     for (const item of Array.from(items)) {
       if (item.type.startsWith('image/') || item.type === 'application/pdf') {
         const file = item.getAsFile();
         if (file) {
           await handleFile(file);
+          isImagesHandled = true;
         }
       }
     }
-  }, [handleFile]);
+
+    // If we handled images, we might want to prevent default if we handled everything
+    // But if there's text, we still want the text to be pasted.
+    // However, if the user explicitly wants to avoid HTML garbage, we can intercept text paste too.
+    
+    const text = event.clipboardData.getData('text/plain');
+    if (text && preferences.smartPaste) {
+      // Detect if the plain text content actually includes full HTML boilerplate
+      // This often happens when copying from LLM web views that include the full document structure
+      const hasHtmlBoilerplate = /<html|<body/i.test(text);
+      
+      if (hasHtmlBoilerplate) {
+        event.preventDefault();
+        
+        // Sanitize: Strip <html>, <body>, <head> tags but keep their inner content if possible
+        // A simple approach is to strip the tags themselves
+        let cleaned = text
+          .replace(/<!doctype[^>]*>/gi, '')
+          .replace(/<html[^>]*>/gi, '')
+          .replace(/<\/html>/gi, '')
+          .replace(/<head[^>]*>[\s\S]*?<\/head>/gi, '')
+          .replace(/<body[^>]*>/gi, '')
+          .replace(/<\/body>/gi, '')
+          .trim();
+          
+        if (editorRef.current) {
+          // Use the editor's API to insert text at cursor
+          editorRef.current.insertText(cleaned);
+        } else {
+          // Fallback to manual update if ref lost
+          onChange(value + (value.endsWith('\n') ? '' : '\n') + cleaned);
+        }
+      }
+    }
+  }, [handleFile, value, onChange, preferences.smartPaste]);
 
   return (
     <div 
@@ -221,6 +262,7 @@ export default function RichEditor({
         )}
       >
         <MdEditor
+          ref={editorRef}
           value={value}
           style={{ height: '400px', border: 'none', backgroundColor: 'var(--bg-color)', color: 'var(--ink-color)' }}
           renderHTML={(text) => (

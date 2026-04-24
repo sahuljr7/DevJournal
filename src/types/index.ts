@@ -45,6 +45,7 @@ export interface WorkLog {
 export interface AppPreferences {
   theme: 'editorial' | 'dark' | 'high-contrast';
   fontFamily: 'serif' | 'sans' | 'mono';
+  smartPaste: boolean;
 }
 
 export interface AppState {

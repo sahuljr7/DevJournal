@@ -1,6 +1,7 @@
 import { motion } from 'motion/react';
-import { X, Palette, Type, Check } from 'lucide-react';
+import { X, Palette, Type, Check, ClipboardCopy } from 'lucide-react';
 import { AppPreferences } from '../types';
+import { cn } from '../lib/utils';
 
 interface SettingsPanelProps {
   preferences: AppPreferences;
@@ -99,6 +100,36 @@ export default function SettingsPanel({ preferences, onUpdate, onClose }: Settin
                 </button>
               ))}
             </div>
+          </section>
+
+          {/* Paste behavior */}
+          <section>
+            <div className="flex items-center gap-2 text-[var(--muted-color)] mb-4 uppercase text-[10px] font-bold tracking-widest">
+              <ClipboardCopy size={14} />
+              <span>Paste Intelligence</span>
+            </div>
+            <button 
+              onClick={() => onUpdate({ smartPaste: !preferences.smartPaste })}
+              className={cn(
+                "w-full flex items-start gap-4 p-4 rounded-xl border transition-all text-left",
+                preferences.smartPaste 
+                  ? 'border-[var(--ink-color)] bg-[var(--secondary-bg)]' 
+                  : 'border-[var(--border-color)] hover:border-[var(--muted-color)]'
+              )}
+            >
+              <div className={cn(
+                "mt-1 w-4 h-4 rounded border flex items-center justify-center shrink-0",
+                preferences.smartPaste ? "bg-[var(--ink-color)] border-[var(--ink-color)]" : "border-[var(--border-color)]"
+              )}>
+                {preferences.smartPaste && <Check size={12} className="text-[var(--bg-color)]" />}
+              </div>
+              <div className="flex-1">
+                <span className="text-sm font-bold text-[var(--ink-color)] block mb-1">Smart Plain-Text Paste</span>
+                <p className="text-[10px] text-[var(--muted-color)] leading-relaxed">
+                  Automatically detects and strips unwanted HTML markup when pasting from AI tools (ChatGPT, Copilot, etc.) to ensure clean Markdown entries.
+                </p>
+              </div>
+            </button>
           </section>
         </div>
 

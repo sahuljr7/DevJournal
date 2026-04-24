@@ -25,7 +25,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       try {
         const parsed = JSON.parse(saved);
         if (!parsed.preferences) {
-          parsed.preferences = { theme: 'editorial', fontFamily: 'serif' };
+          parsed.preferences = { theme: 'editorial', fontFamily: 'serif', smartPaste: true };
+        } else if (parsed.preferences.smartPaste === undefined) {
+          parsed.preferences.smartPaste = true;
         }
         return parsed;
       } catch (e) {
@@ -35,7 +37,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return { 
       cards: [], 
       logs: [], 
-      preferences: { theme: 'editorial', fontFamily: 'serif' } 
+      preferences: { theme: 'editorial', fontFamily: 'serif', smartPaste: true } 
     };
   });
 
