@@ -216,22 +216,20 @@ export default function RichEditor({
     
     const text = event.clipboardData.getData('text/plain');
     if (text && preferences.smartPaste) {
-      // Detect if the plain text content actually includes full HTML boilerplate
-      // This often happens when copying from LLM web views that include the full document structure
-      const hasHtmlBoilerplate = /<html|<body/i.test(text);
+      // Detect if the plain text content actually includes HTML tags
+      // or trailing metadata/comments often found in AI tool exports
+      const hasTags = /<[a-z][\s\S]*>|<\/?[a-z]+>/i.test(text);
       
-      if (hasHtmlBoilerplate) {
+      if (hasTags) {
         event.preventDefault();
         
-        // Sanitize: Strip <html>, <body>, <head> tags but keep their inner content if possible
-        // A simple approach is to strip the tags themselves
+        // Aggressive sanitize: Strip all HTML tags but preserve content
+        // We use a regex that matches common HTML tags
         let cleaned = text
-          .replace(/<!doctype[^>]*>/gi, '')
-          .replace(/<html[^>]*>/gi, '')
-          .replace(/<\/html>/gi, '')
-          .replace(/<head[^>]*>[\s\S]*?<\/head>/gi, '')
-          .replace(/<body[^>]*>/gi, '')
-          .replace(/<\/body>/gi, '')
+          .replace(/<[^>]*>?/gm, '')
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
           .trim();
           
         if (editorRef.current) {
@@ -244,6 +242,24 @@ export default function RichEditor({
       }
     }
   }, [handleFile, value, onChange, preferences.smartPaste]);
+
+  const handleAnnotationPaste = (id: string) => (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    if (!preferences.smartPaste) return;
+    
+    const textData = event.clipboardData.getData('text/plain');
+    const hasTags = /<[a-z][\s\S]*>|<\/?[a-z]+>/i.test(textData);
+    
+    if (hasTags) {
+      event.preventDefault();
+      const cleaned = textData.replace(/<[^>]*>?/gm, '').trim();
+      const target = event.currentTarget;
+      const start = target.selectionStart;
+      const end = target.selectionEnd;
+      const val = target.value;
+      const newVal = val.substring(0, start) + cleaned + val.substring(end);
+      updateAnnotation(id, newVal);
+    }
+  };
 
   return (
     <div 
@@ -472,6 +488,7 @@ export default function RichEditor({
                       className="w-full bg-[var(--bg-color)] border border-[var(--border-color)] text-[11px] p-3 pl-8 focus:border-[var(--ink-color)] outline-none min-h-[60px] resize-none font-serif italic text-[var(--muted-color)] leading-relaxed shadow-inner"
                       value={norm.annotation || ''}
                       onChange={(e) => updateAnnotation(norm.id, e.target.value)}
+                      onPaste={handleAnnotationPaste(norm.id)}
                     />
                   </div>
 
