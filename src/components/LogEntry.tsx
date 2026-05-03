@@ -1,5 +1,7 @@
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { 
   Trash2, 
   Clock, 
@@ -214,7 +216,28 @@ export default function LogEntry({ log, onDelete, onUpdate }: LogEntryProps) {
           <ReactMarkdown 
             remarkPlugins={[remarkGfm]}
             components={{ 
-              img: (props) => <ZoomableImage {...props} className="max-w-full h-auto rounded-sm border border-[var(--border-color)] my-8" />
+              img: (props) => <ZoomableImage {...props} className="max-w-full h-auto rounded-sm border border-[var(--border-color)] my-8" />,
+              code({ node, inline, className, children, ...props }: any) {
+                const match = /language-(\w+)/.exec(className || '');
+                return !inline && match ? (
+                  <SyntaxHighlighter
+                    {...(props as any)}
+                    children={String(children).replace(/\n$/, '')}
+                    style={vscDarkPlus}
+                    language={match[1]}
+                    PreTag="div"
+                    customStyle={{
+                      margin: '1.5rem 0',
+                      borderRadius: '4px',
+                      fontSize: '14px',
+                    }}
+                  />
+                ) : (
+                  <code className={className} {...props}>
+                    {children}
+                  </code>
+                );
+              },
             }}
           >
             {log.content}

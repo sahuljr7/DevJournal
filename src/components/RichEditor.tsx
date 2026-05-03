@@ -2,6 +2,8 @@ import React, { useCallback } from 'react';
 import MdEditor from 'react-markdown-editor-lite';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import 'react-markdown-editor-lite/lib/index.css';
 import { useDropzone } from 'react-dropzone';
 import { 
@@ -286,7 +288,28 @@ export default function RichEditor({
               <ReactMarkdown 
                 remarkPlugins={[remarkGfm]}
                 components={{ 
-                  img: (props) => <ZoomableImage {...props} className="max-w-full h-auto rounded-sm border border-[var(--border-color)]" />
+                  img: (props) => <ZoomableImage {...props} className="max-w-full h-auto rounded-sm border border-[var(--border-color)]" />,
+                  code({ node, inline, className, children, ...props }: any) {
+                    const match = /language-(\w+)/.exec(className || '');
+                    return !inline && match ? (
+                      <SyntaxHighlighter
+                        {...(props as any)}
+                        children={String(children).replace(/\n$/, '')}
+                        style={vscDarkPlus}
+                        language={match[1]}
+                        PreTag="div"
+                        customStyle={{
+                          margin: '1.5rem 0',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                        }}
+                      />
+                    ) : (
+                      <code className={className} {...props}>
+                        {children}
+                      </code>
+                    );
+                  },
                 }}
               >
                 {text}

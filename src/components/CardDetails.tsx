@@ -34,6 +34,9 @@ import { cn, formatDate } from '../lib/utils';
 import RichEditor from './RichEditor';
 import LogEntry from './LogEntry';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { summarizeLogs } from '../services/aiService';
 import { ZoomableImage } from './ImageOverlay';
 
@@ -824,7 +827,35 @@ export default function CardDetails({
               <div className="max-w-3xl mx-auto py-12 px-6 bg-[var(--bg-color)] shadow-sm border border-[var(--border-color)] min-h-[400px]">
                 <div className="prose prose-neutral max-w-none text-xl leading-relaxed text-[var(--ink-color)] font-serif italic opacity-90 transition-colors markdown-body">
                   {newLogContent ? (
-                    <ReactMarkdown components={{ img: ZoomableImage }}>{newLogContent}</ReactMarkdown>
+                    <ReactMarkdown 
+                      remarkPlugins={[remarkGfm]}
+                      components={{ 
+                        img: (props) => <ZoomableImage {...props} className="max-w-full h-auto rounded-sm border border-[var(--border-color)]" />,
+                        code({ node, inline, className, children, ...props }: any) {
+                          const match = /language-(\w+)/.exec(className || '');
+                          return !inline && match ? (
+                            <SyntaxHighlighter
+                              {...(props as any)}
+                              children={String(children).replace(/\n$/, '')}
+                              style={vscDarkPlus}
+                              language={match[1]}
+                              PreTag="div"
+                              customStyle={{
+                                margin: '1.5rem 0',
+                                borderRadius: '4px',
+                                fontSize: '14px',
+                              }}
+                            />
+                          ) : (
+                            <code className={className} {...props}>
+                              {children}
+                            </code>
+                          );
+                        },
+                      }}
+                    >
+                      {newLogContent}
+                    </ReactMarkdown>
                   ) : (
                     <div className="flex items-center justify-center h-40 text-[var(--muted-color)] text-sm opacity-40">
                       Draft is currently void of content...
@@ -875,7 +906,34 @@ export default function CardDetails({
               <p className="text-xs text-red-500 font-mono">{summaryError}</p>
             ) : (
               <div className="prose prose-neutral dark:prose-invert max-w-none font-serif italic text-[var(--ink-color)] opacity-90 leading-relaxed text-sm">
-                <ReactMarkdown>{summary || ''}</ReactMarkdown>
+                <ReactMarkdown 
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    code({ node, inline, className, children, ...props }: any) {
+                      const match = /language-(\w+)/.exec(className || '');
+                      return !inline && match ? (
+                        <SyntaxHighlighter
+                          {...(props as any)}
+                          children={String(children).replace(/\n$/, '')}
+                          style={vscDarkPlus}
+                          language={match[1]}
+                          PreTag="div"
+                          customStyle={{
+                            margin: '1rem 0',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                          }}
+                        />
+                      ) : (
+                        <code className={className} {...props}>
+                          {children}
+                        </code>
+                      );
+                    },
+                  }}
+                >
+                  {summary || ''}
+                </ReactMarkdown>
               </div>
             )}
             
