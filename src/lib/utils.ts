@@ -26,11 +26,11 @@ export function markdownToPlainText(markdown: string): string {
     wordwrap: false,
     selectors: [
       { selector: 'a', options: { hideLinkHrefIfSameAsText: true } },
-      { selector: 'h1', options: { uppercase: true, format: 'headingStrategy' } },
-      { selector: 'h2', options: { uppercase: true, format: 'headingStrategy' } },
-      { selector: 'h3', options: { uppercase: true, format: 'headingStrategy' } },
-      { selector: 'code', options: { format: 'inlineCodeStrategy' } },
-      { selector: 'pre', options: { format: 'blockCodeStrategy' } },
+      { selector: 'h1', format: 'headingStrategy', options: { uppercase: true } },
+      { selector: 'h2', format: 'headingStrategy', options: { uppercase: true } },
+      { selector: 'h3', format: 'headingStrategy', options: { uppercase: true } },
+      { selector: 'code', format: 'inlineCodeStrategy' },
+      { selector: 'pre', format: 'blockCodeStrategy' },
     ],
     formatters: {
       'headingStrategy': (elem, walk, builder, formatOptions) => {
