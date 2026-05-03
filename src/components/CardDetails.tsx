@@ -30,7 +30,7 @@ import { jsPDF } from 'jspdf';
 import JSZip from 'jszip';
 import { saveAs } from 'file-saver';
 import { JiraCard, WorkLog, Attachment, LogTemplate, SubTask } from '../types';
-import { cn, formatDate } from '../lib/utils';
+import { cn, formatDate, markdownToPlainText } from '../lib/utils';
 import RichEditor from './RichEditor';
 import LogEntry from './LogEntry';
 import ReactMarkdown from 'react-markdown';
@@ -226,117 +226,136 @@ export default function CardDetails({
 
   const downloadFullTaskPDF = () => {
     const doc = new jsPDF();
-    let yPos = 20;
+    const margin = 10;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const contentWidth = pageWidth - (margin * 2);
+    let yPos = margin + 10;
+
+    const checkPage = (height: number) => {
+      if (yPos + height > pageHeight - margin) {
+        doc.addPage();
+        yPos = margin + 10;
+        return true;
+      }
+      return false;
+    };
 
     // Header
-    doc.setFontSize(18);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`${card.jiraId}: ${card.title}`, 20, yPos);
+    doc.setFontSize(16);
+    doc.setFont('courier', 'bold');
+    const headerText = `${card.jiraId}: ${card.title}`;
+    const splitHeader = doc.splitTextToSize(headerText, contentWidth);
+    doc.text(splitHeader, margin, yPos);
+    yPos += (splitHeader.length * 7) + 5;
+
+    doc.setFontSize(10);
+    doc.setFont('courier', 'normal');
+    doc.text(`Status: ${card.status.toUpperCase()}`, margin, yPos);
     yPos += 10;
 
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Status: ${card.status.toUpperCase()}`, 20, yPos);
-    yPos += 15;
-
-    // Splitter
+    // Divider
     doc.setDrawColor(200, 200, 200);
-    doc.line(20, yPos - 5, 190, yPos - 5);
+    doc.line(margin, yPos, pageWidth - margin, yPos);
+    yPos += 10;
 
     // Description
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Description:', 20, yPos);
+    doc.setFont('courier', 'bold');
+    doc.text('DESCRIPTION:', margin, yPos);
     yPos += 7;
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    const splitDesc = doc.splitTextToSize(card.description || 'No description provided.', 170);
-    doc.text(splitDesc, 20, yPos);
+    doc.setFont('courier', 'normal');
+    const cleanDesc = markdownToPlainText(card.description || 'No description provided.');
+    const splitDesc = doc.splitTextToSize(cleanDesc, contentWidth);
+    doc.text(splitDesc, margin, yPos);
     yPos += (splitDesc.length * 5) + 8;
 
-    // Links & References
+    // Links
     if (card.links && card.links.length > 0) {
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'bold');
-      doc.text('External References:', 20, yPos);
+      checkPage(20);
+      doc.setFont('courier', 'bold');
+      doc.text('EXTERNAL REFERENCES:', margin, yPos);
       yPos += 7;
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(0, 0, 255);
+      doc.setFont('courier', 'normal');
       card.links.forEach(link => {
-        if (yPos > 280) { doc.addPage(); yPos = 20; }
-        doc.text(link, 25, yPos);
+        checkPage(10);
+        doc.text(`- ${link}`, margin + 5, yPos);
         yPos += 6;
       });
-      doc.setTextColor(0, 0, 0);
       yPos += 8;
-    } else {
-      yPos += 4;
     }
 
     // Tasks
     if (card.tasks && card.tasks.length > 0) {
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Action Items:', 20, yPos);
+      checkPage(20);
+      doc.setFont('courier', 'bold');
+      doc.text('ACTION ITEMS:', margin, yPos);
       yPos += 7;
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
+      doc.setFont('courier', 'normal');
       card.tasks.forEach(t => {
-        if (yPos > 280) { doc.addPage(); yPos = 20; }
-        const symbol = t.completed ? '[x]' : '[ ]';
-        doc.text(`${symbol} ${t.text}`, 25, yPos);
-        yPos += 6;
+        checkPage(10);
+        const symbol = t.completed ? '[X]' : '[ ]';
+        const taskText = `${symbol} ${t.text}`;
+        const splitTask = doc.splitTextToSize(taskText, contentWidth - 5);
+        doc.text(splitTask, margin + 5, yPos);
+        yPos += (splitTask.length * 5) + 2;
       });
-      yPos += 12;
+      yPos += 10;
     }
 
-    // Logs Section
-    doc.addPage();
-    yPos = 20;
+    // Logs
+    checkPage(20);
     doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text('Work Ledger (Log Entries)', 20, yPos);
+    doc.setFont('courier', 'bold');
+    doc.text('WORK LEDGER', margin, yPos);
+    yPos += 8;
+    doc.line(margin, yPos, pageWidth - margin, yPos);
     yPos += 10;
-    doc.line(20, yPos - 5, 190, yPos - 5);
 
-    logs.forEach((log, index) => {
-      if (yPos > 240) { doc.addPage(); yPos = 20; }
-      
-      const logNum = logs.length - index;
+    filteredLogs.forEach((log, index) => {
+      checkPage(30);
+      const logNum = filteredLogs.length - index;
       doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(100, 100, 100);
-      doc.text(`ENTRY #${logNum} // ${formatDate(log.timestamp)}`, 20, yPos);
+      doc.setFont('courier', 'bold');
+      doc.text(`ENTRY #${logNum} // ${formatDate(log.timestamp)}`, margin, yPos);
       yPos += 8;
       
-      doc.setTextColor(0, 0, 0);
       doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      const splitLog = doc.splitTextToSize(log.content, 170);
-      doc.text(splitLog, 20, yPos);
-      yPos += (splitLog.length * 5) + 10;
+      doc.setFont('courier', 'normal');
+      const cleanLog = markdownToPlainText(log.content);
+      const splitLog = doc.splitTextToSize(cleanLog, contentWidth);
+      
+      // Manual pagination for log content
+      splitLog.forEach((line: string) => {
+        if (checkPage(5)) {
+          // re-render header on new page for context if needed? requirements don't ask but let's just keep yPos clean
+        }
+        doc.text(line, margin, yPos);
+        yPos += 5;
+      });
+      
+      yPos += 5;
 
       if (log.attachments && log.attachments.length > 0) {
-         doc.setFontSize(8);
-         doc.setFont('helvetica', 'italic');
-         doc.text(`Note: ${log.attachments.length} source file(s) consigned to this entry.`, 25, yPos);
-         yPos += 8;
+        checkPage(10);
+        doc.setFontSize(8);
+        doc.setFont('courier', 'italic');
+        doc.text(`(Contains ${log.attachments.length} attachment reference(s))`, margin + 5, yPos);
+        yPos += 8;
       }
-      
-      yPos += 5; // Spacing between entries
+      yPos += 5;
     });
 
-    // Footer info on all pages
+    // Footer
     const pageCount = (doc as any).internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
       doc.setFontSize(8);
+      doc.setFont('courier', 'normal');
       doc.setTextColor(150, 150, 150);
-      doc.text(`DevJournal Export // ${card.jiraId} // Page ${i} of ${pageCount}`, 20, 285);
+      doc.text(`DevJournal // ${card.jiraId} // Page ${i} of ${pageCount}`, margin, pageHeight - 5);
     }
 
-    doc.save(`TaskReport-${card.jiraId}.pdf`);
+    doc.save(`Report-${card.jiraId}.pdf`);
   };
 
   const downloadAllTextLogs = async () => {
