@@ -9,6 +9,7 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 import { useAppContext } from '../context/AppContext';
 import { cn } from '../lib/utils';
+import { JiraCard } from '../types';
 import Sidebar from '../components/Sidebar';
 import CardDetails from '../components/CardDetails';
 import ExportPanel from '../components/ExportPanel';
@@ -32,6 +33,7 @@ export default function Dashboard() {
   
   const [selectedCardId, setSelectedCardId] = useState<string | null>(id || null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | JiraCard['status']>('all');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isExporting, setIsExporting] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -70,9 +72,11 @@ export default function Dashboard() {
         new Date(c.createdAt) <= new Date(`${dateRange.end}T23:59:59`)
       );
 
-      return matchesSearch && matchesDate;
+      const matchesStatus = statusFilter === 'all' || c.status === statusFilter;
+
+      return matchesSearch && matchesDate && matchesStatus;
     });
-  }, [state.cards, searchTerm, dateRange]);
+  }, [state.cards, searchTerm, dateRange, statusFilter]);
 
   const allTags = useMemo(() => {
     const tags = new Set<string>();
@@ -141,6 +145,8 @@ export default function Dashboard() {
             onOpenSettings={() => setIsSettingsOpen(true)}
             dateRange={dateRange}
             onDateRangeChange={setDateRange}
+            statusFilter={statusFilter}
+            onStatusFilterChange={setStatusFilter}
           />
         </div>
       </motion.aside>

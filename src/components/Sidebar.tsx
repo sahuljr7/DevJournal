@@ -13,6 +13,8 @@ interface SidebarProps {
   onOpenSettings: () => void;
   dateRange: { start: string; end: string } | null;
   onDateRangeChange: (range: { start: string; end: string } | null) => void;
+  statusFilter: 'all' | JiraCard['status'];
+  onStatusFilterChange: (status: 'all' | JiraCard['status']) => void;
 }
 
 export default function Sidebar({
@@ -26,6 +28,8 @@ export default function Sidebar({
   onOpenSettings,
   dateRange,
   onDateRangeChange,
+  statusFilter,
+  onStatusFilterChange,
 }: SidebarProps) {
   return (
     <div className="flex flex-col h-full bg-[var(--bg-color)] backdrop-blur-md transition-colors duration-300">
@@ -93,6 +97,28 @@ export default function Sidebar({
                   onChange={(e) => onDateRangeChange({ ...dateRange, start: dateRange?.start || '', end: e.target.value } as any)}
                 />
               </div>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[8px] font-bold uppercase tracking-widest text-[var(--muted-color)]">Status Filter</span>
+            </div>
+            <div className="flex bg-[var(--secondary-bg)] border border-[var(--border-color)] p-0.5 rounded-sm">
+              {(['all', 'todo', 'in-progress', 'done'] as const).map((s) => (
+                <button
+                  key={s}
+                  onClick={() => onStatusFilterChange(s)}
+                  className={cn(
+                    "flex-1 px-1 py-1.5 text-[7px] uppercase font-bold tracking-tighter transition-all",
+                    statusFilter === s 
+                      ? "bg-[var(--ink-color)] text-[var(--bg-color)]" 
+                      : "text-[var(--muted-color)] hover:text-[var(--ink-color)]"
+                  )}
+                >
+                  {s}
+                </button>
+              ))}
             </div>
           </div>
         </div>
