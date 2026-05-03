@@ -26,9 +26,30 @@ export function markdownToPlainText(markdown: string): string {
     wordwrap: false,
     selectors: [
       { selector: 'a', options: { hideLinkHrefIfSameAsText: true } },
-      { selector: 'h1', options: { uppercase: true } },
-      { selector: 'h2', options: { uppercase: true } },
-      { selector: 'h3', options: { uppercase: true } },
-    ]
+      { selector: 'h1', options: { uppercase: true, format: 'headingStrategy' } },
+      { selector: 'h2', options: { uppercase: true, format: 'headingStrategy' } },
+      { selector: 'h3', options: { uppercase: true, format: 'headingStrategy' } },
+      { selector: 'code', options: { format: 'inlineCodeStrategy' } },
+      { selector: 'pre', options: { format: 'blockCodeStrategy' } },
+    ],
+    formatters: {
+      'headingStrategy': (elem, walk, builder, formatOptions) => {
+        builder.openBlock();
+        walk(elem.children, builder);
+        builder.closeBlock();
+      },
+      'inlineCodeStrategy': (elem, walk, builder, formatOptions) => {
+        builder.addInline('`');
+        walk(elem.children, builder);
+        builder.addInline('`');
+      },
+      'blockCodeStrategy': (elem, walk, builder, formatOptions) => {
+        builder.openBlock();
+        builder.addInline('--- CODE BLOCK ---\n');
+        walk(elem.children, builder);
+        builder.addInline('\n------------------');
+        builder.closeBlock();
+      }
+    }
   }).trim();
 }

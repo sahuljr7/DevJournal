@@ -226,7 +226,7 @@ export default function CardDetails({
 
   const downloadFullTaskPDF = () => {
     const doc = new jsPDF();
-    const margin = 10;
+    const margin = 15;
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const contentWidth = pageWidth - (margin * 2);
@@ -241,118 +241,108 @@ export default function CardDetails({
       return false;
     };
 
-    // Header
-    doc.setFontSize(16);
-    doc.setFont('courier', 'bold');
-    const headerText = `${card.jiraId}: ${card.title}`;
-    const splitHeader = doc.splitTextToSize(headerText, contentWidth);
-    doc.text(splitHeader, margin, yPos);
-    yPos += (splitHeader.length * 7) + 5;
+    const renderWrappedText = (text: string, size: number, style: 'normal' | 'bold' | 'italic' = 'normal', gap = 5) => {
+      doc.setFontSize(size);
+      doc.setFont('helvetica', style);
+      const lines = doc.splitTextToSize(text, contentWidth);
+      lines.forEach((line: string) => {
+        checkPage(size / 2);
+        doc.text(line, margin, yPos);
+        yPos += (size / 2) + 1.2;
+      });
+      yPos += gap;
+    };
+
+    // Header section
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    const headerLines = doc.splitTextToSize(`${card.jiraId}: ${card.title}`, contentWidth);
+    doc.text(headerLines, margin, yPos);
+    yPos += (headerLines.length * 8) + 5;
 
     doc.setFontSize(10);
-    doc.setFont('courier', 'normal');
-    doc.text(`Status: ${card.status.toUpperCase()}`, margin, yPos);
-    yPos += 10;
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    doc.text(`STATUS: ${card.status.toUpperCase()} // EXPORTED: ${new Date().toLocaleDateString()}`, margin, yPos);
+    doc.setTextColor(0, 0, 0);
+    yPos += 8;
 
-    // Divider
     doc.setDrawColor(200, 200, 200);
     doc.line(margin, yPos, pageWidth - margin, yPos);
-    yPos += 10;
+    yPos += 12;
 
-    // Description
-    doc.setFont('courier', 'bold');
-    doc.text('DESCRIPTION:', margin, yPos);
-    yPos += 7;
-    doc.setFont('courier', 'normal');
-    const cleanDesc = markdownToPlainText(card.description || 'No description provided.');
-    const splitDesc = doc.splitTextToSize(cleanDesc, contentWidth);
-    doc.text(splitDesc, margin, yPos);
-    yPos += (splitDesc.length * 5) + 8;
+    // Content sections
+    renderWrappedText('DESCRIPTION', 10, 'bold', 2);
+    renderWrappedText(markdownToPlainText(card.description || 'No description provided.'), 11, 'normal', 8);
 
-    // Links
     if (card.links && card.links.length > 0) {
-      checkPage(20);
-      doc.setFont('courier', 'bold');
-      doc.text('EXTERNAL REFERENCES:', margin, yPos);
+      checkPage(15);
+      renderWrappedText('EXTERNAL REFERENCES', 10, 'bold', 2);
+      card.links.forEach(link => renderWrappedText(`- ${link}`, 9, 'normal', 1));
       yPos += 7;
-      doc.setFont('courier', 'normal');
-      card.links.forEach(link => {
-        checkPage(10);
-        doc.text(`- ${link}`, margin + 5, yPos);
-        yPos += 6;
-      });
-      yPos += 8;
     }
 
-    // Tasks
     if (card.tasks && card.tasks.length > 0) {
-      checkPage(20);
-      doc.setFont('courier', 'bold');
-      doc.text('ACTION ITEMS:', margin, yPos);
-      yPos += 7;
-      doc.setFont('courier', 'normal');
+      checkPage(15);
+      renderWrappedText('ACTION ITEMS', 10, 'bold', 2);
       card.tasks.forEach(t => {
-        checkPage(10);
         const symbol = t.completed ? '[X]' : '[ ]';
-        const taskText = `${symbol} ${t.text}`;
-        const splitTask = doc.splitTextToSize(taskText, contentWidth - 5);
-        doc.text(splitTask, margin + 5, yPos);
-        yPos += (splitTask.length * 5) + 2;
+        renderWrappedText(`${symbol} ${t.text}`, 10, 'normal', 1);
       });
-      yPos += 10;
+      yPos += 7;
     }
 
-    // Logs
-    checkPage(20);
+    // Work Ledger Section
+    doc.addPage();
+    yPos = margin + 10;
     doc.setFontSize(14);
-    doc.setFont('courier', 'bold');
+    doc.setFont('helvetica', 'bold');
     doc.text('WORK LEDGER', margin, yPos);
     yPos += 8;
     doc.line(margin, yPos, pageWidth - margin, yPos);
     yPos += 10;
 
-    filteredLogs.forEach((log, index) => {
-      checkPage(30);
-      const logNum = filteredLogs.length - index;
+    const logsToPrint = filteredLogs.length > 0 ? filteredLogs : logs;
+    logsToPrint.forEach((log, index) => {
+      checkPage(25);
+      const logNum = logsToPrint.length - index;
+      
       doc.setFontSize(9);
-      doc.setFont('courier', 'bold');
-      doc.text(`ENTRY #${logNum} // ${formatDate(log.timestamp)}`, margin, yPos);
-      yPos += 8;
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(80, 80, 80);
+      doc.text(`ENTRY #${logNum} // DATE: ${formatDate(log.timestamp)}`, margin, yPos);
+      yPos += 6;
       
-      doc.setFontSize(10);
-      doc.setFont('courier', 'normal');
-      const cleanLog = markdownToPlainText(log.content);
-      const splitLog = doc.splitTextToSize(cleanLog, contentWidth);
-      
-      // Manual pagination for log content
-      splitLog.forEach((line: string) => {
-        if (checkPage(5)) {
-          // re-render header on new page for context if needed? requirements don't ask but let's just keep yPos clean
-        }
-        doc.text(line, margin, yPos);
-        yPos += 5;
-      });
-      
-      yPos += 5;
+      if (log.linkedStatus) {
+        doc.text(`LINKED STATUS: ${log.linkedStatus.toUpperCase()}`, margin, yPos);
+        yPos += 6;
+      }
+
+      doc.setTextColor(0, 0, 0);
+      renderWrappedText(markdownToPlainText(log.content), 10, 'normal', 6);
 
       if (log.attachments && log.attachments.length > 0) {
         checkPage(10);
         doc.setFontSize(8);
-        doc.setFont('courier', 'italic');
-        doc.text(`(Contains ${log.attachments.length} attachment reference(s))`, margin + 5, yPos);
-        yPos += 8;
+        doc.setFont('helvetica', 'italic');
+        doc.setTextColor(120, 120, 120);
+        doc.text(`[Note: ${log.attachments.length} attachment reference(s) preserved in journal]`, margin + 5, yPos);
+        yPos += 10;
       }
+      
+      doc.setDrawColor(240, 240, 240);
+      doc.line(margin + 10, yPos - 5, pageWidth - margin - 10, yPos - 5);
       yPos += 5;
     });
 
-    // Footer
+    // Pagination Footers
     const pageCount = (doc as any).internal.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
       doc.setPage(i);
       doc.setFontSize(8);
-      doc.setFont('courier', 'normal');
+      doc.setFont('helvetica', 'normal');
       doc.setTextColor(150, 150, 150);
-      doc.text(`DevJournal // ${card.jiraId} // Page ${i} of ${pageCount}`, margin, pageHeight - 5);
+      doc.text(`DevJournal Export // ${card.jiraId} // Page ${i} of ${pageCount}`, margin, pageHeight - 10);
     }
 
     doc.save(`Report-${card.jiraId}.pdf`);
